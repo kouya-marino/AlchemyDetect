@@ -230,6 +230,7 @@ class TrainTab(QWidget):
             return
 
         self._start_btn.setEnabled(False)
+        self._start_btn.setText("Preparing...")
         self._stop_btn.setEnabled(True)
         self._save_btn.setEnabled(False)
         self._poll_timer.start()
@@ -261,7 +262,11 @@ class TrainTab(QWidget):
                     self._log_viewer.append_log(f"[Iter {iteration}] total_loss={total_loss:.4f}")
             elif msg_type == "status":
                 status = msg.get("status", "")
-                if status in ("completed", "stopped", "error"):
+                if status == "downloading":
+                    self._start_btn.setText("Downloading weights...")
+                elif status == "running":
+                    self._start_btn.setText("Training...")
+                elif status in ("completed", "stopped", "error"):
                     self._on_training_finished(status)
 
         # Check if process died unexpectedly
@@ -271,6 +276,7 @@ class TrainTab(QWidget):
     def _on_training_finished(self, status):
         """Handle training completion."""
         self._poll_timer.stop()
+        self._start_btn.setText("Start Training")
         self._start_btn.setEnabled(True)
         self._stop_btn.setEnabled(False)
         self._save_btn.setEnabled(status == "completed")

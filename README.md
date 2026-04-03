@@ -2,6 +2,8 @@
 
 A desktop GUI application for training and running inference with Detectron2 models.
 
+![AlchemyDetect](docs/app.jpg)
+
 ## Features
 
 - **Train** object detection and instance segmentation models with a visual interface

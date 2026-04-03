@@ -51,11 +51,23 @@ def _train_process_entry(cfg_yaml, output_dir, metric_queue, stop_event):
         with open(os.path.join(output_dir, "config.yaml"), "w") as f:
             f.write(cfg.dump())
 
-        metric_queue.put({"type": "log", "msg": "Training started..."})
+        # Check if pretrained weights need downloading
+        weights_path = cfg.MODEL.WEIGHTS
+        if weights_path.startswith("http://") or weights_path.startswith("https://"):
+            from detectron2.checkpoint import DetectionCheckpointer
+
+            metric_queue.put({
+                "type": "log",
+                "msg": f"Downloading pretrained weights...\n  {weights_path}",
+            })
+            metric_queue.put({"type": "status", "status": "downloading"})
+
+        metric_queue.put({"type": "log", "msg": "Initializing trainer..."})
         metric_queue.put({"type": "status", "status": "running"})
 
         trainer = AlchemyTrainer(cfg, metric_queue, stop_event)
         trainer.resume_or_load(resume=False)
+        metric_queue.put({"type": "log", "msg": "Weights loaded. Starting training..."})
         trainer.train()
 
         metric_queue.put({"type": "log", "msg": "Training completed successfully!"})
