@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "alchemydetect"
-version = "0.1.0"
+version = "0.2.0"
 description = "Desktop GUI application for training and running inference with Detectron2 models"
 readme = "README.md"
 license = {text = "MIT"}
