@@ -1,0 +1,17 @@
+# PyTorch — install via https://pytorch.org/get-started/locally/ for your CUDA version
+# Example: pip install torch torchvision --index-url https://download.pytorch.org/whl/cu118
+torch>=2.0,<2.5
+torchvision>=0.15,<0.20
+
+# Detectron2 — no Windows wheels; install from source:
+# pip install git+https://github.com/facebookresearch/detectron2.git
+
+# GUI
+PyQt6>=6.5
+pyqtgraph>=0.13
+
+# Data / Vision
+pycocotools>=2.0
+opencv-python>=4.8
+Pillow>=10.0
+numpy>=1.24
