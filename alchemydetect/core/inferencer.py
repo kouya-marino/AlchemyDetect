@@ -1,11 +1,10 @@
 """Inference wrapper around Detectron2's DefaultPredictor."""
 
 import cv2
-import numpy as np
 from detectron2.config import get_cfg
+from detectron2.data import MetadataCatalog
 from detectron2.engine import DefaultPredictor
 from detectron2.utils.visualizer import ColorMode, Visualizer
-from detectron2.data import MetadataCatalog
 
 
 def load_predictor(config_yaml_path, weights_path, threshold=0.5):

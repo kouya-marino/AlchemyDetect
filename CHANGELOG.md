@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.0] - 2026-04-04
+
+### Added
+- CI/CD pipeline with GitHub Actions (lint, test, build)
+- Automated PyPI publishing on version tags
+- Test suite with 23 tests covering core modules and GUI widgets
+- pyproject.toml for modern Python packaging
+- ruff for linting and formatting
+- Pretrained weights download status indicator in training UI
+
 ## [0.1.0] - 2026-04-04
 
 ### Added

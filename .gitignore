@@ -31,5 +31,14 @@ output/
 # Logs
 *.log
 
+# Test / Build
+.pytest_cache/
+htmlcov/
+coverage.xml
+*.egg-info/
+
+# Detectron2 source build
+detectron2/
+
 # Config
 .claude/

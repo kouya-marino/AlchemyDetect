@@ -9,8 +9,8 @@ from PyQt6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QMessageBox,
-    QPushButton,
     QProgressBar,
+    QPushButton,
     QSplitter,
     QTableWidget,
     QTableWidgetItem,
@@ -136,7 +136,8 @@ class InferenceTab(QWidget):
             self._folder_btn.setEnabled(True)
 
     def _on_run_single(self):
-        path = browse_file(self, "Select Image", filter_str="Images (*.jpg *.jpeg *.png *.bmp *.tif *.tiff *.webp);;All Files (*)")
+        img_filter = "Images (*.jpg *.jpeg *.png *.bmp *.tif *.tiff *.webp);;All Files (*)"
+        path = browse_file(self, "Select Image", filter_str=img_filter)
         if path:
             self._start_inference([path])
 

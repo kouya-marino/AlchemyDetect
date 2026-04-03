@@ -1,10 +1,9 @@
 """Main application window."""
 
 from PyQt6.QtWidgets import QMainWindow, QTabWidget
-from PyQt6.QtCore import Qt
 
-from .train_tab import TrainTab
 from .inference_tab import InferenceTab
+from .train_tab import TrainTab
 
 
 class MainWindow(QMainWindow):

@@ -1,8 +1,6 @@
 """Training tab: dataset selection, model config, training controls, live metrics."""
 
-import os
-
-from PyQt6.QtCore import QTimer
+from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtWidgets import (
     QComboBox,
     QDoubleSpinBox,
@@ -17,7 +15,6 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-from PyQt6.QtCore import Qt
 
 from alchemydetect.core.model_catalog import get_model_names
 from alchemydetect.workers.train_worker import TrainProcess
@@ -192,6 +189,7 @@ class TrainTab(QWidget):
 
         # Validate dataset
         from alchemydetect.core.dataset_utils import validate_coco_json
+
         is_valid, msg = validate_coco_json(train_json, train_images)
         if not is_valid:
             QMessageBox.critical(self, "Dataset Error", msg)
@@ -204,6 +202,7 @@ class TrainTab(QWidget):
 
         try:
             from alchemydetect.core.config_builder import build_cfg
+
             cfg = build_cfg(
                 model_name=model_name,
                 train_images_dir=train_images,

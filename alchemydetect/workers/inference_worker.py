@@ -44,9 +44,7 @@ class InferenceWorker(QThread):
                 visualize_predictions,
             )
 
-            predictor, cfg = load_predictor(
-                self._config_yaml_path, self._weights_path, self._threshold
-            )
+            predictor, cfg = load_predictor(self._config_yaml_path, self._weights_path, self._threshold)
 
             total = len(self._image_paths)
             for i, img_path in enumerate(self._image_paths):
@@ -81,9 +79,6 @@ class InferenceWorker(QThread):
         if p.is_file():
             return [p]
         elif p.is_dir():
-            paths = sorted(
-                f for f in p.iterdir()
-                if f.suffix.lower() in cls.IMAGE_EXTENSIONS
-            )
+            paths = sorted(f for f in p.iterdir() if f.suffix.lower() in cls.IMAGE_EXTENSIONS)
             return paths
         return []

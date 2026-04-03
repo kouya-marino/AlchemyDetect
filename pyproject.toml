@@ -1,0 +1,62 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "alchemydetect"
+version = "0.1.0"
+description = "Desktop GUI application for training and running inference with Detectron2 models"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.10"
+authors = [
+    {name = "Prashant Rawat", email = "prashantrawatmailbox@gmail.com"},
+]
+keywords = ["detectron2", "object-detection", "instance-segmentation", "gui", "training"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Scientific/Engineering :: Image Recognition",
+]
+dependencies = [
+    "PyQt6>=6.5",
+    "pyqtgraph>=0.13",
+    "pycocotools>=2.0",
+    "opencv-python>=4.8",
+    "Pillow>=10.0",
+    "numpy>=1.24",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+    "ruff>=0.4.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/kouya-marino/AlchemyDetect"
+Repository = "https://github.com/kouya-marino/AlchemyDetect"
+Issues = "https://github.com/kouya-marino/AlchemyDetect/issues"
+
+[project.gui-scripts]
+alchemydetect = "alchemydetect.app:main"
+
+[tool.setuptools.packages.find]
+include = ["alchemydetect*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v --tb=short"
+
+[tool.ruff]
+target-version = "py310"
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]

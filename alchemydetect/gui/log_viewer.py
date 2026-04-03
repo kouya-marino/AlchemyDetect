@@ -1,7 +1,7 @@
 """Live log viewer widget."""
 
-from PyQt6.QtWidgets import QPlainTextEdit
 from PyQt6.QtGui import QTextCursor
+from PyQt6.QtWidgets import QPlainTextEdit
 
 
 class LogViewer(QPlainTextEdit):
