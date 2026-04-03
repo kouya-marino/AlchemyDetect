@@ -36,7 +36,7 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y xvfb libxcb-xinerama0 libxcb-cursor0 libegl1 libgl1-mesa-glx
+          sudo apt-get install -y xvfb libxcb-xinerama0 libxcb-cursor0 libegl1 libgl1-mesa-dri libglib2.0-0
       - name: Install PyTorch (CPU)
         run: pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
       - name: Install Detectron2
