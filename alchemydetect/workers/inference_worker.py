@@ -38,13 +38,13 @@ class InferenceWorker(QThread):
 
     def run(self):
         try:
+            from detectron2.data import MetadataCatalog
+
             from alchemydetect.core.inferencer import (
                 load_predictor,
                 run_inference_single,
                 visualize_predictions,
             )
-
-            from detectron2.data import MetadataCatalog
 
             predictor, cfg = load_predictor(self._config_yaml_path, self._weights_path, self._threshold)
 

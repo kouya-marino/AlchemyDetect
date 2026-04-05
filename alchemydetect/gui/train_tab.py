@@ -239,7 +239,10 @@ class TrainTab(QWidget):
         self._log_viewer.append_log(f"  Annotations: {summary['num_annotations']}")
         self._log_viewer.append_log(f"  Classes ({summary['num_classes']}): {classes_str}")
         self._log_viewer.append_log(f"  Model: {model_name}")
-        self._log_viewer.append_log(f"  LR: {self._lr_spin.value()} | Iterations: {self._iter_spin.value()} | Batch: {self._batch_spin.value()}")
+        lr = self._lr_spin.value()
+        iters = self._iter_spin.value()
+        batch = self._batch_spin.value()
+        self._log_viewer.append_log(f"  LR: {lr} | Iterations: {iters} | Batch: {batch}")
         self._log_viewer.append_log("")
 
         try:
