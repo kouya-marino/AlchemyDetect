@@ -16,21 +16,21 @@ class InferenceWorker(QThread):
 
     IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff", ".webp"}
 
-    def __init__(self, config_yaml_path, weights_path, image_paths, threshold=0.5, metadata=None):
+    def __init__(self, config_yaml_path, weights_path, image_paths, threshold=0.5, class_names=None):
         """
         Args:
             config_yaml_path: Path to saved config.yaml.
             weights_path: Path to .pth weights file.
             image_paths: List of image file paths.
             threshold: Confidence threshold.
-            metadata: Optional Detectron2 metadata for class names.
+            class_names: Optional list of class name strings.
         """
         super().__init__()
         self._config_yaml_path = config_yaml_path
         self._weights_path = weights_path
         self._image_paths = image_paths
         self._threshold = threshold
-        self._metadata = metadata
+        self._class_names = class_names or []
         self._should_stop = False
 
     def stop(self):
@@ -44,7 +44,18 @@ class InferenceWorker(QThread):
                 visualize_predictions,
             )
 
+            from detectron2.data import MetadataCatalog
+
             predictor, cfg = load_predictor(self._config_yaml_path, self._weights_path, self._threshold)
+
+            # Set up metadata with class names for visualization
+            metadata = None
+            if self._class_names:
+                meta_name = "__alchemy_inference"
+                if meta_name in MetadataCatalog.list():
+                    MetadataCatalog.remove(meta_name)
+                MetadataCatalog.get(meta_name).set(thing_classes=self._class_names)
+                metadata = MetadataCatalog.get(meta_name)
 
             total = len(self._image_paths)
             for i, img_path in enumerate(self._image_paths):
@@ -53,7 +64,7 @@ class InferenceWorker(QThread):
 
                 try:
                     img_bgr, instances = run_inference_single(predictor, img_path)
-                    annotated = visualize_predictions(img_bgr, instances, self._metadata)
+                    annotated = visualize_predictions(img_bgr, instances, metadata)
                     self.result_ready.emit(str(img_path), instances, annotated)
                 except Exception as e:
                     self.error.emit(f"Error on {img_path}: {e}")

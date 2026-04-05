@@ -84,6 +84,14 @@ class TrainTab(QWidget):
         row4.addWidget(btn_val_json)
         dg_layout.addLayout(row4)
 
+        # Dataset info label
+        self._dataset_info_label = QLabel("")
+        self._dataset_info_label.setStyleSheet("color: #2e7d32; font-weight: bold; padding: 4px;")
+        dg_layout.addWidget(self._dataset_info_label)
+
+        # Update info when JSON path changes
+        self._train_json_edit.textChanged.connect(self._update_dataset_info)
+
         main_layout.addWidget(dataset_group)
 
         # --- Model + Hyperparameters row ---
@@ -152,6 +160,11 @@ class TrainTab(QWidget):
         self._save_btn.clicked.connect(self._on_save)
         btn_row.addWidget(self._save_btn)
 
+        # Device label
+        self._device_label = QLabel("")
+        self._device_label.setStyleSheet("font-weight: bold; padding: 2px 6px;")
+        btn_row.addWidget(self._device_label)
+
         main_layout.addLayout(btn_row)
 
         # --- Log viewer + Loss plot (split view) ---
@@ -177,6 +190,24 @@ class TrainTab(QWidget):
         if path:
             line_edit.setText(path)
 
+    def _update_dataset_info(self):
+        """Update the dataset info label when the JSON path changes."""
+        json_path = self._train_json_edit.text().strip()
+        if not json_path:
+            self._dataset_info_label.setText("")
+            return
+        try:
+            from alchemydetect.core.dataset_utils import get_dataset_summary
+
+            summary = get_dataset_summary(json_path)
+            classes_str = ", ".join(summary["class_names"])
+            self._dataset_info_label.setText(
+                f"{summary['num_images']} images | {summary['num_annotations']} annotations | "
+                f"{summary['num_classes']} classes: {classes_str}"
+            )
+        except Exception:
+            self._dataset_info_label.setText("")
+
     def _on_start(self):
         """Validate inputs and start training."""
         train_images = self._train_images_edit.text().strip()
@@ -188,7 +219,7 @@ class TrainTab(QWidget):
             return
 
         # Validate dataset
-        from alchemydetect.core.dataset_utils import validate_coco_json
+        from alchemydetect.core.dataset_utils import get_dataset_summary, validate_coco_json
 
         is_valid, msg = validate_coco_json(train_json, train_images)
         if not is_valid:
@@ -199,6 +230,17 @@ class TrainTab(QWidget):
         val_json = self._val_json_edit.text().strip() or None
 
         model_name = self._model_combo.currentText()
+
+        # Show dataset summary in log
+        summary = get_dataset_summary(train_json)
+        classes_str = ", ".join(summary["class_names"])
+        self._log_viewer.append_log("--- Dataset Summary ---")
+        self._log_viewer.append_log(f"  Images: {summary['num_images']}")
+        self._log_viewer.append_log(f"  Annotations: {summary['num_annotations']}")
+        self._log_viewer.append_log(f"  Classes ({summary['num_classes']}): {classes_str}")
+        self._log_viewer.append_log(f"  Model: {model_name}")
+        self._log_viewer.append_log(f"  LR: {self._lr_spin.value()} | Iterations: {self._iter_spin.value()} | Batch: {self._batch_spin.value()}")
+        self._log_viewer.append_log("")
 
         try:
             from alchemydetect.core.config_builder import build_cfg
@@ -222,8 +264,17 @@ class TrainTab(QWidget):
         self._log_viewer.clear_logs()
         self._loss_plot.clear_plot()
 
+        # Build dataset info for the child process to re-register
+        dataset_info = [
+            {"name": "alchemy_train", "json_path": train_json, "image_root": train_images},
+        ]
+        if val_images and val_json:
+            dataset_info.append(
+                {"name": "alchemy_val", "json_path": val_json, "image_root": val_images},
+            )
+
         try:
-            self._train_process.start(cfg)
+            self._train_process.start(cfg, dataset_info)
         except Exception as e:
             QMessageBox.critical(self, "Training Error", str(e))
             return
@@ -253,6 +304,13 @@ class TrainTab(QWidget):
             msg_type = msg.get("type", "")
             if msg_type == "log":
                 self._log_viewer.append_log(msg.get("msg", ""))
+            elif msg_type == "device":
+                device_str = msg.get("device", "")
+                if "GPU" in device_str:
+                    self._device_label.setStyleSheet("color: #2e7d32; font-weight: bold; padding: 2px 6px;")
+                else:
+                    self._device_label.setStyleSheet("color: #d84315; font-weight: bold; padding: 2px 6px;")
+                self._device_label.setText(device_str)
             elif msg_type == "metrics":
                 total_loss = msg.get("total_loss")
                 iteration = msg.get("iter")

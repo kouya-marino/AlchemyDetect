@@ -60,3 +60,15 @@ def get_num_classes(json_path):
     with open(json_path, "r") as f:
         data = json.load(f)
     return len(data["categories"])
+
+
+def get_dataset_summary(json_path):
+    """Return a summary dict with image count, class count, class names, and annotation count."""
+    with open(json_path, "r") as f:
+        data = json.load(f)
+    return {
+        "num_images": len(data.get("images", [])),
+        "num_annotations": len(data.get("annotations", [])),
+        "num_classes": len(data.get("categories", [])),
+        "class_names": [c["name"] for c in data.get("categories", [])],
+    }

@@ -31,6 +31,7 @@ class InferenceTab(QWidget):
         super().__init__(parent)
         self._config_path = None
         self._weights_path = None
+        self._class_names = []
         self._worker = None
         self._results = []  # List of (path, instances, annotated_rgb)
         self._current_idx = 0
@@ -135,6 +136,15 @@ class InferenceTab(QWidget):
             self._single_btn.setEnabled(True)
             self._folder_btn.setEnabled(True)
 
+            # Load class names if available
+            self._class_names = []
+            class_names_file = Path(weights_path).parent / "class_names.json"
+            if class_names_file.exists():
+                import json
+
+                with open(class_names_file, "r") as f:
+                    self._class_names = json.load(f)
+
     def _on_run_single(self):
         img_filter = "Images (*.jpg *.jpeg *.png *.bmp *.tif *.tiff *.webp);;All Files (*)"
         path = browse_file(self, "Select Image", filter_str=img_filter)
@@ -173,6 +183,7 @@ class InferenceTab(QWidget):
             self._weights_path,
             image_paths,
             threshold=self._threshold_spin.value(),
+            class_names=self._class_names,
         )
         self._worker.result_ready.connect(self._on_result)
         self._worker.progress.connect(self._on_progress)
@@ -220,7 +231,11 @@ class InferenceTab(QWidget):
         classes = instances.pred_classes.numpy() if instances.has("pred_classes") else []
 
         for i in range(len(instances)):
-            cls_text = str(int(classes[i])) if i < len(classes) else "?"
+            cls_id = int(classes[i]) if i < len(classes) else -1
+            if self._class_names and 0 <= cls_id < len(self._class_names):
+                cls_text = self._class_names[cls_id]
+            else:
+                cls_text = str(cls_id) if cls_id >= 0 else "?"
             score_text = f"{scores[i]:.3f}" if i < len(scores) else "?"
             bbox_text = ""
             if i < len(boxes):

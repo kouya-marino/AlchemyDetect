@@ -58,8 +58,8 @@ def build_cfg(
     cfg.DATASETS.TRAIN = (train_dataset_name,)
     cfg.DATASETS.TEST = (val_dataset_name,) if val_dataset_name else ()
 
-    # Dataloader
-    cfg.DATALOADER.NUM_WORKERS = 2
+    # Dataloader — use 0 workers to avoid nested multiprocessing issues on Windows
+    cfg.DATALOADER.NUM_WORKERS = 0
 
     # Model weights
     if weights_path:

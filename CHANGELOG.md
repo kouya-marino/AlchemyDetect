@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.0] - 2026-04-05
+
+### Added
+- Dataset info display in Train tab (images, annotations, class count and names)
+- GPU/CPU device indicator label in training UI
+- Class name mapping saved during training (`class_names.json`)
+- Inference shows class names instead of IDs in overlay and detections table
+
+### Fixed
+- Training process crash due to daemon subprocess restriction (set `daemon=False`)
+- Dataloader `NUM_WORKERS` set to 0 to avoid nested multiprocessing on Windows
+- Dataset registration in child process (fixes `alchemy_train` not found error)
+- Config reconstruction using `merge_from_file` instead of missing `merge_from_string`
+- GPU memory attribute name (`total_memory` not `total_mem`)
+
 ## [0.2.0] - 2026-04-04
 
 ### Added

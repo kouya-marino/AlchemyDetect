@@ -41,10 +41,13 @@ def save_model_dialog(parent, output_dir):
         return None
 
     dest = Path(dest_dir)
+    class_names_file = output_path / "class_names.json"
     try:
         shutil.copy2(weights_file, dest / "model_final.pth")
         if config_file.exists():
             shutil.copy2(config_file, dest / "config.yaml")
+        if class_names_file.exists():
+            shutil.copy2(class_names_file, dest / "class_names.json")
         QMessageBox.information(parent, "Save Model", f"Model saved to:\n{dest}")
         return str(dest)
     except Exception as e:
