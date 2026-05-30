@@ -62,13 +62,28 @@ def get_num_classes(json_path):
     return len(data["categories"])
 
 
+def get_class_names(json_path):
+    """Return category names ordered to match Detectron2's contiguous class ids.
+
+    Detectron2 (via the COCO API) maps category ids to contiguous ids 0..N-1 in
+    ascending id order, so the names must be sorted by category id to line up
+    with predicted class indices. Reading them in raw JSON order would mislabel
+    predictions whenever categories are not already listed by ascending id.
+    """
+    with open(json_path, "r") as f:
+        data = json.load(f)
+    categories = sorted(data.get("categories", []), key=lambda c: c["id"])
+    return [c["name"] for c in categories]
+
+
 def get_dataset_summary(json_path):
     """Return a summary dict with image count, class count, class names, and annotation count."""
     with open(json_path, "r") as f:
         data = json.load(f)
+    categories = sorted(data.get("categories", []), key=lambda c: c["id"])
     return {
         "num_images": len(data.get("images", [])),
         "num_annotations": len(data.get("annotations", [])),
-        "num_classes": len(data.get("categories", [])),
-        "class_names": [c["name"] for c in data.get("categories", [])],
+        "num_classes": len(categories),
+        "class_names": [c["name"] for c in categories],
     }

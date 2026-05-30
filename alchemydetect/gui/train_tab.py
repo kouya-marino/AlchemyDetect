@@ -302,7 +302,25 @@ class TrainTab(QWidget):
     def _poll_training(self):
         """Poll the training process for new metrics and logs."""
         messages = self._train_process.poll_metrics()
+        if self._handle_messages(messages):
+            return
 
+        # Process died: terminal status may still be in flight on the queue's
+        # feeder thread. Join + drain before concluding, and only treat a dead
+        # process as an error if no terminal status arrives.
+        if not self._train_process.is_alive() and self._poll_timer.isActive():
+            remaining = self._train_process.drain_remaining()
+            if self._handle_messages(remaining):
+                return
+            self._on_training_finished("error")
+
+    def _handle_messages(self, messages):
+        """Process a batch of messages from the training process.
+
+        Returns:
+            True if a terminal status ("completed"/"stopped"/"error") was
+            handled, meaning training has finished and polling should stop.
+        """
         for msg in messages:
             msg_type = msg.get("type", "")
             if msg_type == "log":
@@ -328,10 +346,8 @@ class TrainTab(QWidget):
                     self._start_btn.setText("Training...")
                 elif status in ("completed", "stopped", "error"):
                     self._on_training_finished(status)
-
-        # Check if process died unexpectedly
-        if not self._train_process.is_alive() and self._poll_timer.isActive():
-            self._on_training_finished("error")
+                    return True
+        return False
 
     def _on_training_finished(self, status):
         """Handle training completion."""

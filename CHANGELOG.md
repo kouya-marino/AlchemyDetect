@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Fixed
+- Class names now ordered by COCO category id to match Detectron2's contiguous
+  class id mapping — previously predictions could be mislabeled when categories
+  were not listed in ascending-id order
+- Successful short training runs no longer occasionally report "error": the
+  training process is now joined and its queue drained for in-flight terminal
+  status messages before concluding
+
 ## [0.3.0] - 2026-04-05
 
 ### Added
