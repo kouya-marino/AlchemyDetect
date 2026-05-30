@@ -15,3 +15,8 @@ def test_train_process_cleanup_when_not_running():
     assert tp._process is None
     assert tp._metric_queue is None
     assert tp._stop_event is None
+
+
+def test_drain_remaining_no_process():
+    tp = TrainProcess()
+    assert tp.drain_remaining() == []

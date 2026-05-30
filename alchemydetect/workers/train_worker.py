@@ -26,7 +26,7 @@ def _train_process_entry(cfg_yaml, output_dir, dataset_info, metric_queue, stop_
         # Import heavy deps only in the child process
         from detectron2.config import get_cfg
 
-        from alchemydetect.core.dataset_utils import register_coco_dataset
+        from alchemydetect.core.dataset_utils import get_class_names, register_coco_dataset
         from alchemydetect.core.trainer import AlchemyTrainer, QueueLogHandler
 
         # Set up logging to redirect to the queue
@@ -64,13 +64,12 @@ def _train_process_entry(cfg_yaml, output_dir, dataset_info, metric_queue, stop_
         with open(os.path.join(output_dir, "config.yaml"), "w") as f:
             f.write(cfg.dump())
 
-        # Save class mapping for inference (read directly from the COCO JSON)
+        # Save class mapping for inference. Names must be ordered by category id
+        # to match Detectron2's contiguous class id mapping (see get_class_names).
         import json
 
         train_info = dataset_info[0]
-        with open(train_info["json_path"], "r") as f:
-            coco_data = json.load(f)
-        class_names = [c["name"] for c in coco_data.get("categories", [])]
+        class_names = get_class_names(train_info["json_path"])
         with open(os.path.join(output_dir, "class_names.json"), "w") as f:
             json.dump(class_names, f)
         metric_queue.put({"type": "log", "msg": f"Saved class mapping: {class_names}"})
@@ -175,6 +174,21 @@ class TrainProcess:
             except Empty:
                 break
         return messages
+
+    def drain_remaining(self, timeout=2.0):
+        """Join the finished process and drain any messages still in flight.
+
+        A multiprocessing.Queue uses a background feeder thread, so terminal
+        messages (e.g. the final status) can still be in transit after the
+        process is no longer alive. Joining flushes the feeder, after which a
+        final drain returns whatever remains.
+
+        Returns:
+            List of remaining message dicts.
+        """
+        if self._process is not None:
+            self._process.join(timeout=timeout)
+        return self.poll_metrics()
 
     def cleanup(self):
         """Clean up resources after training is done."""

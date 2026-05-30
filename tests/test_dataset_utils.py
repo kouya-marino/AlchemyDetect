@@ -3,7 +3,12 @@
 import json
 import os
 
-from alchemydetect.core.dataset_utils import get_num_classes, validate_coco_json
+from alchemydetect.core.dataset_utils import (
+    get_class_names,
+    get_dataset_summary,
+    get_num_classes,
+    validate_coco_json,
+)
 
 
 def test_validate_coco_json_valid(coco_dataset):
@@ -57,3 +62,37 @@ def test_validate_coco_json_empty_categories(temp_dir):
 def test_get_num_classes(coco_dataset):
     _, json_path = coco_dataset
     assert get_num_classes(json_path) == 1
+
+
+def _write_categories(temp_dir, categories):
+    path = os.path.join(temp_dir, "cats.json")
+    with open(path, "w") as f:
+        json.dump({"images": [], "annotations": [], "categories": categories}, f)
+    return path
+
+
+def test_get_class_names_sorted_by_id(temp_dir):
+    # Categories listed out of ascending-id order; names must come back ordered
+    # by id to match Detectron2's contiguous class id mapping.
+    path = _write_categories(
+        temp_dir,
+        [
+            {"id": 2, "name": "cat"},
+            {"id": 1, "name": "dog"},
+            {"id": 3, "name": "bird"},
+        ],
+    )
+    assert get_class_names(path) == ["dog", "cat", "bird"]
+
+
+def test_get_dataset_summary_sorted_by_id(temp_dir):
+    path = _write_categories(
+        temp_dir,
+        [
+            {"id": 5, "name": "cat"},
+            {"id": 2, "name": "dog"},
+        ],
+    )
+    summary = get_dataset_summary(path)
+    assert summary["num_classes"] == 2
+    assert summary["class_names"] == ["dog", "cat"]
