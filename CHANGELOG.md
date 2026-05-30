@@ -11,6 +11,9 @@ All notable changes to this project will be documented in this file.
 - Successful short training runs no longer occasionally report "error": the
   training process is now joined and its queue drained for in-flight terminal
   status messages before concluding
+- Compute device (CUDA/CPU) is now selected in the training child process
+  instead of the GUI process, so building a config no longer initializes a
+  CUDA context in the GUI process
 
 ## [0.3.0] - 2026-04-05
 

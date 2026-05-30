@@ -1,6 +1,5 @@
 """Build Detectron2 config from user-specified parameters."""
 
-import torch
 from detectron2 import model_zoo
 from detectron2.config import get_cfg
 
@@ -80,8 +79,10 @@ def build_cfg(
     if hasattr(cfg.MODEL, "RETINANET"):
         cfg.MODEL.RETINANET.NUM_CLASSES = num_classes
 
-    # Device
-    cfg.MODEL.DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+    # Device is intentionally NOT decided here: build_cfg runs in the GUI
+    # process, and calling torch.cuda.is_available() would initialize a CUDA
+    # context in that process and conflict with the training child. The child
+    # process sets cfg.MODEL.DEVICE based on its own GPU availability.
 
     # Output
     cfg.OUTPUT_DIR = output_dir

@@ -56,6 +56,12 @@ def _train_process_entry(cfg_yaml, output_dir, dataset_info, metric_queue, stop_
         cfg = get_cfg()
         cfg.merge_from_file(tmp_cfg_path)
         cfg.OUTPUT_DIR = output_dir
+
+        # Decide the compute device here, in the child process, so the GUI
+        # process never initializes a CUDA context (see config_builder).
+        import torch
+
+        cfg.MODEL.DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
         cfg.freeze()
 
         os.remove(tmp_cfg_path)
@@ -75,8 +81,6 @@ def _train_process_entry(cfg_yaml, output_dir, dataset_info, metric_queue, stop_
         metric_queue.put({"type": "log", "msg": f"Saved class mapping: {class_names}"})
 
         # Log device info
-        import torch
-
         device = cfg.MODEL.DEVICE
         if device == "cuda" and torch.cuda.is_available():
             gpu_name = torch.cuda.get_device_name(0)
