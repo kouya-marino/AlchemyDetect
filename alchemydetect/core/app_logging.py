@@ -18,12 +18,29 @@ LOGGER_NAME = "alchemydetect"
 _SESSION_MARKER = "_alchemy_session"
 
 
+MAX_LOG_FILES = 20
+
+
 def get_log_dir():
     """Return (creating if needed) the directory where log files are written."""
     override = os.environ.get("ALCHEMYDETECT_LOG_DIR")
     log_dir = Path(override) if override else Path.cwd() / "logs"
     log_dir.mkdir(parents=True, exist_ok=True)
     return log_dir
+
+
+def prune_old_logs(log_dir, keep=MAX_LOG_FILES):
+    """Delete all but the newest `keep` session log files (best-effort).
+
+    Filenames are timestamped (alchemydetect_YYYYMMDD_HHMMSS.log), so lexical sort
+    is chronological.
+    """
+    logs = sorted(Path(log_dir).glob("alchemydetect_*.log"))
+    for old in logs[: max(0, len(logs) - keep)]:
+        try:
+            old.unlink()
+        except OSError:
+            pass
 
 
 def init_logging(level=logging.INFO):
@@ -49,6 +66,7 @@ def init_logging(level=logging.INFO):
         handler.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(message)s", datefmt="%Y-%m-%d %H:%M:%S"))
         logger.addHandler(handler)
         logger.info("AlchemyDetect session log started: %s", log_path)
+    prune_old_logs(log_dir)
     return log_path
 
 

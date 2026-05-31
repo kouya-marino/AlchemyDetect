@@ -159,6 +159,7 @@ def build_export_metadata(
     output_names,
     output_roles,
     preprocessing,
+    score_thresh=None,
     timestamp=None,
 ):
     """Build a serializable metadata dict describing an exported model.
@@ -187,6 +188,7 @@ def build_export_metadata(
         "input_size": [int(height), int(width)],
         "fp16": bool(fp16),
         "dynamic_axes": bool(dynamic_axes),
+        "score_thresh": score_thresh,
         "task": task,
         "class_names": list(class_names),
         "input_name": "image",
@@ -514,6 +516,7 @@ def run_onnx_export(resolved, output_dir, options, log_fn):
         output_names=result["output_names"],
         output_roles=result["output_roles"],
         preprocessing=result["preprocessing"],
+        score_thresh=options.get("score_thresh", EXPORT_SCORE_THRESH),
     )
     metadata_path = str(output_dir / METADATA_FILENAME)
     with open(metadata_path, "w") as f:
@@ -623,7 +626,11 @@ def run_tensorrt_export(resolved, output_dir, options, log_fn):
 
     output_dir = Path(output_dir)
     log_fn("Step 1/2 — exporting ONNX...")
-    artifacts = run_onnx_export(resolved, output_dir, options, log_fn)
+    # The intermediate ONNX stays fp32; FP16 is applied only at the engine build,
+    # where it actually belongs (fp16-converting the ONNX is fragile and redundant).
+    onnx_options = dict(options)
+    onnx_options["fp16"] = False
+    artifacts = run_onnx_export(resolved, output_dir, onnx_options, log_fn)
 
     log_fn("Step 2/2 — building TensorRT engine...")
     engine_path = export_tensorrt(
@@ -634,5 +641,16 @@ def run_tensorrt_export(resolved, output_dir, options, log_fn):
         input_size=options["input_size"],
         log_fn=log_fn,
     )
+
+    # Record the engine build settings in the shared metadata (the top-level
+    # `fp16` describes the ONNX, which is always fp32 for the TensorRT path).
+    metadata_path = output_dir / METADATA_FILENAME
+    try:
+        meta = json.loads(metadata_path.read_text())
+        meta["engine"] = {"fp16": bool(options["fp16"]), "workspace_gb": options.get("workspace_gb", 4.0)}
+        metadata_path.write_text(json.dumps(meta, indent=2))
+    except (OSError, json.JSONDecodeError):
+        pass
+
     artifacts.append(engine_path)
     return artifacts

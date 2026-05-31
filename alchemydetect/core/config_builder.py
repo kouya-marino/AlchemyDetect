@@ -3,7 +3,7 @@
 from detectron2 import model_zoo
 from detectron2.config import get_cfg
 
-from .dataset_utils import get_num_classes, register_coco_dataset
+from .dataset_utils import get_num_classes
 from .model_catalog import get_config_path
 
 
@@ -41,14 +41,11 @@ def build_cfg(
     config_path = get_config_path(model_name)
     num_classes = get_num_classes(train_json)
 
-    # Register datasets
+    # Only name the datasets here — the actual registration happens in the training
+    # child process (see train_worker), so the GUI process never registers datasets
+    # or touches the DatasetCatalog.
     train_dataset_name = "alchemy_train"
-    register_coco_dataset(train_dataset_name, train_json, train_images_dir)
-
-    val_dataset_name = None
-    if val_json and val_images_dir:
-        val_dataset_name = "alchemy_val"
-        register_coco_dataset(val_dataset_name, val_json, val_images_dir)
+    val_dataset_name = "alchemy_val" if (val_json and val_images_dir) else None
 
     cfg = get_cfg()
     cfg.merge_from_file(model_zoo.get_config_file(config_path))

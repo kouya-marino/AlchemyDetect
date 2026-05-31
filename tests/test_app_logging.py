@@ -2,7 +2,13 @@
 
 import logging
 
-from alchemydetect.core.app_logging import LOGGER_NAME, get_log_dir, get_logger, init_logging
+from alchemydetect.core.app_logging import (
+    LOGGER_NAME,
+    get_log_dir,
+    get_logger,
+    init_logging,
+    prune_old_logs,
+)
 
 _SESSION_MARKER = "_alchemy_session"
 
@@ -41,6 +47,17 @@ def test_init_logging_creates_file(tmp_path, monkeypatch):
         assert "hello from test" in log_path.read_text(encoding="utf-8")
     finally:
         _reset_logger()
+
+
+def test_prune_old_logs_keeps_newest(tmp_path):
+    # 25 timestamped log files; prune to keep the newest 20.
+    names = [f"alchemydetect_202605{d:02d}_000000.log" for d in range(1, 26)]
+    for n in names:
+        (tmp_path / n).write_text("x", encoding="utf-8")
+    prune_old_logs(tmp_path, keep=20)
+    remaining = sorted(p.name for p in tmp_path.glob("alchemydetect_*.log"))
+    assert len(remaining) == 20
+    assert remaining == sorted(names)[-20:]  # the newest 20 survive
 
 
 def test_init_logging_idempotent(tmp_path, monkeypatch):
