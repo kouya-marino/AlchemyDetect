@@ -4,9 +4,16 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.4.2] - 2026-05-31
+
 ### Added
 - `docs/TensorRT.md` — how the TensorRT export/runtime works plus exact install
   steps (pip wheels, manual tar/zip, Docker) for Linux and Windows.
+
+### Changed
+- CI/publish workflows bumped to Node.js 24-compatible action versions
+  (`actions/checkout@v5`, `actions/setup-python@v6`, `actions/upload-artifact@v6`)
+  ahead of GitHub's Node 20 removal.
 
 ## [0.4.1] - 2026-05-31
 
