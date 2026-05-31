@@ -6,6 +6,7 @@ import os
 import pytest
 
 from alchemydetect.core.exporter import (
+    _classify_outputs,
     build_export_metadata,
     copy_sidecar_files,
     detect_task_from_config,
@@ -162,6 +163,32 @@ def test_detect_task_from_config(temp_dir):
     with open(det, "w") as f:
         f.write("MODEL:\n  MASK_ON: false\n")
     assert detect_task_from_config(det) == "detection"
+
+
+# --- output role classification -------------------------------------------- #
+def test_classify_outputs_ignores_image_size():
+    # boxes (N,4), classes (N,) int, scores (N,) float, image_size (2,) int.
+    # The trailing image-size tensor must NOT be labeled "classes", and names
+    # must be unique (this was the bug behind the Deploy boolean-index crash).
+    specs = [((1, 4), False), ((1,), False), ((1,), True), ((2,), False)]
+    names, roles = _classify_outputs(specs)
+    assert roles == ["boxes", "classes", "scores", "ignore"]
+    assert len(set(names)) == len(names)  # unique names, no duplicate pred_classes
+
+
+def test_classify_outputs_two_detections_image_size_ambiguous():
+    # With exactly 2 detections the image-size (2,) matches the box count, but
+    # since a classes role is already assigned, the extra int tensor is ignored.
+    specs = [((2, 4), False), ((2,), False), ((2,), True), ((2,), False)]
+    names, roles = _classify_outputs(specs)
+    assert roles == ["boxes", "classes", "scores", "ignore"]
+    assert len(set(names)) == len(names)
+
+
+def test_classify_outputs_with_masks():
+    specs = [((3, 4), False), ((3,), True), ((3,), False), ((3, 1, 28, 28), True)]
+    _, roles = _classify_outputs(specs)
+    assert roles == ["boxes", "scores", "classes", "masks"]
 
 
 # --- TensorRT export gating ------------------------------------------------ #

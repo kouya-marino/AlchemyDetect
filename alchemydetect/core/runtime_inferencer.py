@@ -89,7 +89,7 @@ class _RuntimeInferencer:
             role = self._role_by_name.get(name)
             if role is None and i < len(self._output_roles):
                 role = self._output_roles[i]
-            if role:
+            if role and role != "ignore":
                 by_role[role] = array
         return by_role
 
@@ -113,6 +113,26 @@ class _RuntimeInferencer:
         if classes is None:
             classes = np.zeros((n,), dtype=np.int64)
         classes = np.asarray(classes).reshape(-1).astype(np.int64)
+
+        # Safety net for models exported before the output-role mapping fix: if a
+        # per-detection array's length disagrees with the box count (e.g. the
+        # image-size tensor leaked into the classes role), reset it rather than
+        # crash on the boolean mask. Correct results require re-exporting.
+        if len(scores) != n or len(classes) != n:
+            from alchemydetect.core.app_logging import get_logger
+
+            get_logger().warning(
+                "Output length mismatch (boxes=%d, scores=%d, classes=%d); this model was likely "
+                "exported before the output-role-mapping fix. Please re-export it. Substituting "
+                "defaults to avoid a crash.",
+                n,
+                len(scores),
+                len(classes),
+            )
+            if len(scores) != n:
+                scores = np.zeros((n,), dtype=np.float32)
+            if len(classes) != n:
+                classes = np.zeros((n,), dtype=np.int64)
 
         keep = scores >= threshold
         boxes, scores, classes = boxes[keep], scores[keep], classes[keep]
