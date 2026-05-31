@@ -1,5 +1,7 @@
 """Background thread for running inference with exported ONNX models."""
 
+import time
+
 from PyQt6.QtCore import QThread, pyqtSignal
 
 from alchemydetect.workers.inference_worker import InferenceWorker
@@ -8,8 +10,8 @@ from alchemydetect.workers.inference_worker import InferenceWorker
 class DeployInferenceWorker(QThread):
     """Runs inference on images using an exported ONNX model in a background thread."""
 
-    # Signals: (image_path, instances, annotated_image_rgb)
-    result_ready = pyqtSignal(str, object, object)
+    # Signals: (image_path, instances, annotated_image_rgb, detection_ms)
+    result_ready = pyqtSignal(str, object, object, float)
     progress = pyqtSignal(int, int)  # (current, total)
     error = pyqtSignal(str)
     finished_all = pyqtSignal()
@@ -68,9 +70,11 @@ class DeployInferenceWorker(QThread):
                     img_bgr = cv2.imread(str(img_path))
                     if img_bgr is None:
                         raise ValueError(f"Could not read image: {img_path}")
+                    start = time.perf_counter()
                     instances = inferencer.infer(img_bgr, self._threshold)
+                    detection_ms = (time.perf_counter() - start) * 1000.0
                     annotated = visualize_predictions(img_bgr, instances, metadata)
-                    self.result_ready.emit(str(img_path), instances, annotated)
+                    self.result_ready.emit(str(img_path), instances, annotated, detection_ms)
                 except Exception as e:
                     self.error.emit(f"Error on {img_path}: {e}")
 

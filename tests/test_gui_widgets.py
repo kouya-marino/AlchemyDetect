@@ -83,3 +83,5 @@ def test_deploy_tab():
     assert not tab._folder_btn.isEnabled()
     # Threshold default
     assert tab._threshold_spin.value() == 0.5
+    # Detection-time label exists and starts empty
+    assert tab._timing_label.text() == ""

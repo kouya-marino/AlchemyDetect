@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+- The Inference and Deploy tabs now show the per-image detection time (and FPS)
+  in the results side panel.
+
 ### Fixed
 - ONNX export mislabeled the traced `image_size` output (shape `(2,)`) as
   "classes" and gave it a duplicate name, so the Deploy tab crashed with
