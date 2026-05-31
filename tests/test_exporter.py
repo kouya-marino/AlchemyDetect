@@ -191,6 +191,31 @@ def test_classify_outputs_with_masks():
     assert roles == ["boxes", "scores", "classes", "masks"]
 
 
+def test_classify_outputs_zero_detections():
+    # A random trace input can yield 0 detections: per-detection tensors are length
+    # 0 (== box count) while the image-size tensor (2,) is still ignored.
+    specs = [((0, 4), False), ((0,), True), ((0,), False), ((2,), False)]
+    _, roles = _classify_outputs(specs)
+    assert roles == ["boxes", "scores", "classes", "ignore"]
+
+
+def test_build_export_metadata_records_score_thresh():
+    meta = build_export_metadata(
+        model_format="onnx",
+        opset=17,
+        input_size=(800, 800),
+        fp16=False,
+        dynamic_axes=True,
+        task="detection",
+        class_names=[],
+        output_names=["pred_boxes"],
+        output_roles=["boxes"],
+        preprocessing={},
+        score_thresh=0.05,
+    )
+    assert meta["score_thresh"] == 0.05
+
+
 # --- TensorRT export gating ------------------------------------------------ #
 @pytest.mark.skipif(is_tensorrt_available(), reason="tensorrt is installed")
 def test_export_tensorrt_requires_tensorrt(temp_dir):

@@ -4,9 +4,14 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.5.1] - 2026-06-01
+
 ### Changed
 - CI: disabled PyPI publish attestations (`attestations: false`) to avoid
   intermittent sigstore/Rekor 502 failures that aborted releases before upload.
+- Expanded unit-test coverage: deploy-runtime postprocessing (`_build_instances`,
+  `_map_roles`, `_preprocess`), the results-viewer navigation, the `SpawnProcess`
+  base, and exporter edge cases.
 
 ## [0.5.0] - 2026-05-31
 
