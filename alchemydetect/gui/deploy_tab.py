@@ -98,6 +98,10 @@ class DeployTab(QWidget):
         self._info_label = QLabel("")
         right_layout.addWidget(self._info_label)
 
+        self._provider_label = QLabel("")
+        self._provider_label.setStyleSheet("color: #6a1b9a; font-weight: bold;")
+        right_layout.addWidget(self._provider_label)
+
         self._timing_label = QLabel("")
         self._timing_label.setStyleSheet("color: #1565c0; font-weight: bold;")
         right_layout.addWidget(self._timing_label)
@@ -212,6 +216,7 @@ class DeployTab(QWidget):
         self._image_viewer.clear_image()
         self._table.setRowCount(0)
         self._timing_label.setText("")
+        self._provider_label.setText("")
 
         self._progress.setVisible(True)
         self._progress.setMaximum(len(image_paths))
@@ -232,6 +237,7 @@ class DeployTab(QWidget):
         self._worker.progress.connect(self._on_progress)
         self._worker.error.connect(self._on_error)
         self._worker.finished_all.connect(self._on_finished)
+        self._worker.provider_ready.connect(self._on_provider)
         self._worker.start()
 
     def _on_stop(self):
@@ -242,6 +248,10 @@ class DeployTab(QWidget):
         self._results.append((image_path, instances, annotated_rgb, detection_ms))
         if len(self._results) == 1:
             self._show_result(0)
+
+    def _on_provider(self, provider):
+        runtime = "TensorRT" if str(self._model_path).lower().endswith(".engine") else "onnxruntime"
+        self._provider_label.setText(f"Runtime: {runtime} — {provider}")
 
     def _on_progress(self, current, total):
         self._progress.setValue(current)

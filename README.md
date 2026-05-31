@@ -81,7 +81,14 @@ AlchemyDetect uses **COCO JSON** format for training datasets. You need:
 
 ONNX runs via `onnxruntime` (GPU provider used automatically when available);
 `.engine` files run via a TensorRT runtime (requires `tensorrt` + `pycuda`).
-Both are independent of Detectron2's predictor.
+Both are independent of Detectron2's predictor. The side panel shows the active
+runtime provider and the per-image detection time so you can confirm whether
+inference is on CPU or GPU.
+
+> If exported ONNX/TensorRT inference seems slow, check the provider label — if
+> it says `CPUExecutionProvider`, onnxruntime fell back to CPU (it needs a CUDA
+> runtime matching your `onnxruntime-gpu` build). The real speedups come from GPU
+> + TensorRT.
 
 ## Logs
 
