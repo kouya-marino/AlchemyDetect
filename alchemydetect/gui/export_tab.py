@@ -107,6 +107,19 @@ class ExportTab(QWidget):
         self._width_spin.setValue(800)
         opt_layout.addWidget(self._width_spin)
 
+        opt_layout.addWidget(QLabel("Score thresh:"))
+        self._score_thresh_spin = QDoubleSpinBox()
+        self._score_thresh_spin.setRange(0.01, 1.0)
+        self._score_thresh_spin.setSingleStep(0.05)
+        self._score_thresh_spin.setDecimals(2)
+        self._score_thresh_spin.setValue(0.05)
+        self._score_thresh_spin.setToolTip(
+            "Confidence threshold baked into the exported model. Detections below it are "
+            "dropped, so the Deploy slider can only filter ABOVE this value. Lower = more "
+            "flexible at deploy time; set to 0.5 to match the .pth predictor's default."
+        )
+        opt_layout.addWidget(self._score_thresh_spin)
+
         self._dynamic_check = QCheckBox("Dynamic axes")
         self._dynamic_check.setChecked(True)
         opt_layout.addWidget(self._dynamic_check)
@@ -237,6 +250,7 @@ class ExportTab(QWidget):
             "dynamic_axes": self._dynamic_check.isChecked(),
             "validate": self._validate_check.isChecked(),
             "workspace_gb": self._trt_workspace_spin.value(),
+            "score_thresh": self._score_thresh_spin.value(),
         }
 
         self._artifacts = []

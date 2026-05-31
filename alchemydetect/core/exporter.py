@@ -276,7 +276,17 @@ def _build_preprocessing(cfg):
     }
 
 
-def export_onnx(config_path, weights_path, output_path, opset, input_size, fp16, dynamic_axes, log_fn):
+def export_onnx(
+    config_path,
+    weights_path,
+    output_path,
+    opset,
+    input_size,
+    fp16,
+    dynamic_axes,
+    log_fn,
+    score_thresh=EXPORT_SCORE_THRESH,
+):
     """Trace a Detectron2 model and export it to ONNX.
 
     Mirrors detectron2's official tools/deploy/export_model.py tracing route:
@@ -292,6 +302,9 @@ def export_onnx(config_path, weights_path, output_path, opset, input_size, fp16,
         fp16: If True, convert the ONNX graph to fp16 (requires onnx package).
         dynamic_axes: If True, mark height/width and detection count as dynamic.
         log_fn: Callable(str) for progress messages.
+        score_thresh: Confidence threshold baked into the exported model. Detections
+            below it are dropped by the model, so the deployment runtime can only
+            filter above it. Lower = more flexible at deploy time.
 
     Returns:
         Dict with output_path, output_names, output_roles, task, preprocessing.
@@ -314,8 +327,8 @@ def export_onnx(config_path, weights_path, output_path, opset, input_size, fp16,
 
     # Decide the device here, in the child process, never in the GUI process.
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    log_fn(f"Loading model and config (device: {device})...")
-    predictor, cfg = load_predictor(config_path, weights_path, threshold=EXPORT_SCORE_THRESH, device=device)
+    log_fn(f"Loading model and config (device: {device}, score threshold: {score_thresh})...")
+    predictor, cfg = load_predictor(config_path, weights_path, threshold=score_thresh, device=device)
     model = predictor.model
     model.eval()
 
@@ -451,6 +464,7 @@ def run_onnx_export(resolved, output_dir, options, log_fn):
         fp16=options["fp16"],
         dynamic_axes=options["dynamic_axes"],
         log_fn=log_fn,
+        score_thresh=options.get("score_thresh", EXPORT_SCORE_THRESH),
     )
 
     artifacts = [onnx_path]

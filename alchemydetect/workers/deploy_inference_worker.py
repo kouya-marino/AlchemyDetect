@@ -15,6 +15,7 @@ class DeployInferenceWorker(QThread):
     progress = pyqtSignal(int, int)  # (current, total)
     error = pyqtSignal(str)
     finished_all = pyqtSignal()
+    provider_ready = pyqtSignal(str)  # active runtime provider (e.g. CPUExecutionProvider)
 
     def __init__(self, model_path, metadata, image_paths, threshold=0.5, class_names=None):
         """
@@ -53,6 +54,7 @@ class DeployInferenceWorker(QThread):
 
                 inferencer = OnnxRuntimeInferencer(self._model_path, self._metadata)
             get_logger().info("Deploy: runtime provider = %s", inferencer.active_provider)
+            self.provider_ready.emit(inferencer.active_provider)
 
             metadata = None
             if self._class_names:

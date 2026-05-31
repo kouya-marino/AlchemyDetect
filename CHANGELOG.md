@@ -7,6 +7,12 @@ All notable changes to this project will be documented in this file.
 ### Added
 - The Inference and Deploy tabs now show the per-image detection time (and FPS)
   in the results side panel.
+- The Deploy tab shows the active runtime provider (e.g. `onnxruntime —
+  CPUExecutionProvider` / `CUDAExecutionProvider`, or `TensorRT`) so it's clear
+  whether inference is running on CPU or GPU.
+- The Export tab exposes the model's baked score threshold (default 0.05).
+  Lower keeps the Deploy threshold slider flexible; set it to 0.5 to match the
+  Detectron2 predictor's default for apples-to-apples comparisons.
 
 ### Fixed
 - ONNX export mislabeled the traced `image_size` output (shape `(2,)`) as
