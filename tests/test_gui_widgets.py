@@ -55,6 +55,15 @@ def test_image_viewer_none_image():
     assert viewer._current_pixmap is None
 
 
+def test_train_tab_progress_bar():
+    from alchemydetect.gui.train_tab import TrainTab
+
+    tab = TrainTab()
+    # Progress bar exists and is hidden until training starts
+    assert tab._progress is not None
+    assert not tab._progress.isVisible()
+
+
 def test_export_tab():
     from alchemydetect.core.exporter import is_onnxruntime_available
     from alchemydetect.gui.export_tab import ExportTab
@@ -73,10 +82,24 @@ def test_export_tab():
     assert tab._validate_check.isEnabled() == is_onnxruntime_available()
 
 
+def test_inference_tab():
+    from alchemydetect.gui.inference_tab import InferenceTab
+
+    tab = InferenceTab()
+    # Shared results panel built; no model loaded; run buttons disabled
+    assert tab._info_label is not None
+    assert tab._table.columnCount() == 3
+    assert not tab._single_btn.isEnabled()
+    assert tab._threshold_spin.value() == 0.5
+
+
 def test_deploy_tab():
     from alchemydetect.gui.deploy_tab import DeployTab
 
     tab = DeployTab()
+    # Provider label is Deploy-specific; shared panel still present
+    assert tab._provider_label is not None
+    assert tab._table.columnCount() == 3
     # No model loaded initially; run buttons disabled
     assert tab._model_path is None
     assert not tab._single_btn.isEnabled()
