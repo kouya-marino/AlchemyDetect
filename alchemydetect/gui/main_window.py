@@ -29,3 +29,15 @@ class MainWindow(QMainWindow):
         tabs.addTab(self._deploy_tab, "Deploy")
 
         self.setCentralWidget(tabs)
+
+    def closeEvent(self, event):
+        """Stop background work cleanly so we don't orphan the training process or
+        destroy a still-running QThread on exit."""
+        for tab in (self._train_tab, self._inference_tab, self._export_tab, self._deploy_tab):
+            shutdown = getattr(tab, "shutdown", None)
+            if shutdown is not None:
+                try:
+                    shutdown()
+                except Exception:
+                    pass
+        super().closeEvent(event)

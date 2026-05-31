@@ -1,8 +1,7 @@
-"""Inference tab: load model, run on images, display results."""
+"""Inference tab: load a trained .pth model, run on images, display results."""
 
 from pathlib import Path
 
-from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
     QDoubleSpinBox,
     QGroupBox,
@@ -11,9 +10,6 @@ from PyQt6.QtWidgets import (
     QMessageBox,
     QProgressBar,
     QPushButton,
-    QSplitter,
-    QTableWidget,
-    QTableWidgetItem,
     QVBoxLayout,
     QWidget,
 )
@@ -21,10 +17,10 @@ from PyQt6.QtWidgets import (
 from alchemydetect.workers.inference_worker import InferenceWorker
 
 from .dialogs import browse_directory, browse_file, load_model_dialog
-from .image_viewer import ImageViewer
+from .results_viewer import ResultsViewerMixin
 
 
-class InferenceTab(QWidget):
+class InferenceTab(ResultsViewerMixin, QWidget):
     """Tab for loading a trained model and running inference."""
 
     def __init__(self, parent=None):
@@ -33,7 +29,7 @@ class InferenceTab(QWidget):
         self._weights_path = None
         self._class_names = []
         self._worker = None
-        self._results = []  # List of (path, instances, annotated_rgb, detection_ms)
+        self._results = []  # (path, instances, annotated_rgb, detection_ms)
         self._current_idx = 0
         self._setup_ui()
 
@@ -86,49 +82,8 @@ class InferenceTab(QWidget):
         self._progress.setVisible(False)
         main_layout.addWidget(self._progress)
 
-        # --- Results area (image viewer + detections table) ---
-        splitter = QSplitter(Qt.Orientation.Horizontal)
-
-        self._image_viewer = ImageViewer()
-        splitter.addWidget(self._image_viewer)
-
-        # Right side: detections table + navigation
-        right_panel = QWidget()
-        right_layout = QVBoxLayout(right_panel)
-
-        self._info_label = QLabel("")
-        right_layout.addWidget(self._info_label)
-
-        self._timing_label = QLabel("")
-        self._timing_label.setStyleSheet("color: #1565c0; font-weight: bold;")
-        right_layout.addWidget(self._timing_label)
-
-        self._table = QTableWidget(0, 3)
-        self._table.setHorizontalHeaderLabels(["Class", "Score", "BBox"])
-        self._table.horizontalHeader().setStretchLastSection(True)
-        right_layout.addWidget(self._table)
-
-        # Navigation
-        nav_row = QHBoxLayout()
-        self._prev_btn = QPushButton("< Prev")
-        self._prev_btn.setEnabled(False)
-        self._prev_btn.clicked.connect(self._on_prev)
-        nav_row.addWidget(self._prev_btn)
-
-        self._nav_label = QLabel("")
-        self._nav_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        nav_row.addWidget(self._nav_label)
-
-        self._next_btn = QPushButton("Next >")
-        self._next_btn.setEnabled(False)
-        self._next_btn.clicked.connect(self._on_next)
-        nav_row.addWidget(self._next_btn)
-
-        right_layout.addLayout(nav_row)
-        splitter.addWidget(right_panel)
-        splitter.setSizes([700, 300])
-
-        main_layout.addWidget(splitter, stretch=1)
+        # --- Results area (image viewer + detections table + nav) ---
+        main_layout.addWidget(self._build_results_panel(), stretch=1)
 
     def _on_load_model(self):
         config_path, weights_path = load_model_dialog(self)
@@ -200,12 +155,6 @@ class InferenceTab(QWidget):
         if self._worker:
             self._worker.stop()
 
-    def _on_result(self, image_path, instances, annotated_rgb, detection_ms):
-        self._results.append((image_path, instances, annotated_rgb, detection_ms))
-        # Show the first result immediately, then update nav
-        if len(self._results) == 1:
-            self._show_result(0)
-
     def _on_progress(self, current, total):
         self._progress.setValue(current)
 
@@ -221,56 +170,16 @@ class InferenceTab(QWidget):
         self._folder_btn.setEnabled(True)
         self._stop_btn.setEnabled(False)
         self._update_nav()
-        self._worker = None
+        # finished_all fires from the worker's run() before it fully returns; wait
+        # for the thread to actually terminate before dropping our only reference,
+        # or Qt aborts with "QThread: Destroyed while thread is still running".
+        if self._worker is not None:
+            self._worker.wait(5000)
+            self._worker = None
 
-    def _show_result(self, idx):
-        if idx < 0 or idx >= len(self._results):
-            return
-        self._current_idx = idx
-        path, instances, annotated_rgb, detection_ms = self._results[idx]
-
-        self._image_viewer.set_image_rgb(annotated_rgb)
-        self._info_label.setText(f"{Path(path).name} — {len(instances)} detections")
-        timing = f"Detection time: {detection_ms:.1f} ms"
-        if detection_ms > 0:
-            timing += f" ({1000.0 / detection_ms:.1f} FPS)"
-        self._timing_label.setText(timing)
-
-        # Populate detections table
-        self._table.setRowCount(len(instances))
-        boxes = instances.pred_boxes.tensor.numpy() if instances.has("pred_boxes") else []
-        scores = instances.scores.numpy() if instances.has("scores") else []
-        classes = instances.pred_classes.numpy() if instances.has("pred_classes") else []
-
-        for i in range(len(instances)):
-            cls_id = int(classes[i]) if i < len(classes) else -1
-            if self._class_names and 0 <= cls_id < len(self._class_names):
-                cls_text = self._class_names[cls_id]
-            else:
-                cls_text = str(cls_id) if cls_id >= 0 else "?"
-            score_text = f"{scores[i]:.3f}" if i < len(scores) else "?"
-            bbox_text = ""
-            if i < len(boxes):
-                b = boxes[i]
-                bbox_text = f"[{b[0]:.0f}, {b[1]:.0f}, {b[2]:.0f}, {b[3]:.0f}]"
-
-            self._table.setItem(i, 0, QTableWidgetItem(cls_text))
-            self._table.setItem(i, 1, QTableWidgetItem(score_text))
-            self._table.setItem(i, 2, QTableWidgetItem(bbox_text))
-
-        self._update_nav()
-
-    def _update_nav(self):
-        total = len(self._results)
-        self._prev_btn.setEnabled(self._current_idx > 0)
-        self._next_btn.setEnabled(self._current_idx < total - 1)
-        if total > 0:
-            self._nav_label.setText(f"{self._current_idx + 1} / {total}")
-        else:
-            self._nav_label.setText("")
-
-    def _on_prev(self):
-        self._show_result(self._current_idx - 1)
-
-    def _on_next(self):
-        self._show_result(self._current_idx + 1)
+    def shutdown(self):
+        """Stop and await the worker thread (called on app close)."""
+        if self._worker is not None:
+            self._worker.stop()
+            self._worker.wait(3000)
+            self._worker = None

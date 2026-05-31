@@ -323,3 +323,9 @@ class ExportTab(QWidget):
             self._log_viewer.append_log("--- Export cancelled ---")
         else:
             self._log_viewer.append_log("--- Export ended with errors ---")
+
+    def shutdown(self):
+        """Stop any export and reap the child process (called on app close)."""
+        self._poll_timer.stop()
+        self._export_process.request_stop()
+        self._export_process.terminate()

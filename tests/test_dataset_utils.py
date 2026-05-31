@@ -59,6 +59,36 @@ def test_validate_coco_json_empty_categories(temp_dir):
     assert "No categories" in msg
 
 
+def _write_coco(temp_dir, categories, annotations):
+    path = os.path.join(temp_dir, "c.json")
+    with open(path, "w") as f:
+        json.dump(
+            {"images": [{"id": 1, "file_name": "x.jpg"}], "annotations": annotations, "categories": categories}, f
+        )
+    return path
+
+
+def test_validate_coco_json_unknown_category_id(temp_dir):
+    path = _write_coco(temp_dir, [{"id": 1, "name": "a"}], [{"id": 1, "category_id": 9, "bbox": [0, 0, 1, 1]}])
+    is_valid, msg = validate_coco_json(path, temp_dir)
+    assert not is_valid
+    assert "unknown category_id" in msg
+
+
+def test_validate_coco_json_bad_bbox(temp_dir):
+    path = _write_coco(temp_dir, [{"id": 1, "name": "a"}], [{"id": 1, "category_id": 1, "bbox": [0, 0, 1]}])
+    is_valid, msg = validate_coco_json(path, temp_dir)
+    assert not is_valid
+    assert "invalid bbox" in msg
+
+
+def test_validate_coco_json_category_without_name(temp_dir):
+    path = _write_coco(temp_dir, [{"id": 1}], [])
+    is_valid, msg = validate_coco_json(path, temp_dir)
+    assert not is_valid
+    assert "id" in msg and "name" in msg
+
+
 def test_get_num_classes(coco_dataset):
     _, json_path = coco_dataset
     assert get_num_classes(json_path) == 1

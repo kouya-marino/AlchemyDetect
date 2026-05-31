@@ -42,6 +42,23 @@ def validate_coco_json(json_path, image_root):
     if len(data["images"]) == 0:
         return False, "No images found in COCO JSON"
 
+    # Every category needs an id and a name.
+    for cat in data["categories"]:
+        if "id" not in cat or "name" not in cat:
+            return False, "Each category must have an 'id' and a 'name'"
+
+    # Annotations must reference defined categories and carry a 4-number bbox, or
+    # training fails later with a confusing error. Scan a bounded sample so this
+    # pre-flight check stays snappy on very large datasets (a malformed export
+    # shows up in the first handful of annotations).
+    category_ids = {cat["id"] for cat in data["categories"]}
+    for ann in data["annotations"][:2000]:
+        if ann.get("category_id") not in category_ids:
+            return False, f"Annotation {ann.get('id')} references unknown category_id {ann.get('category_id')}"
+        bbox = ann.get("bbox")
+        if not isinstance(bbox, (list, tuple)) or len(bbox) != 4:
+            return False, f"Annotation {ann.get('id')} has an invalid bbox (expected 4 numbers)"
+
     # Check that at least some image files exist
     found = 0
     for img_info in data["images"][:10]:

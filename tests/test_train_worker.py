@@ -13,7 +13,7 @@ def test_train_process_cleanup_when_not_running():
     tp = TrainProcess()
     tp.cleanup()
     assert tp._process is None
-    assert tp._metric_queue is None
+    assert tp._queue is None
     assert tp._stop_event is None
 
 

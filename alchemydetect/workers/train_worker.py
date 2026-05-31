@@ -6,10 +6,10 @@ and multiprocessing.Event (stop signal).
 """
 
 import logging
-import multiprocessing as mp
 import os
 import traceback
-from queue import Empty
+
+from alchemydetect.workers.spawn_process import SpawnProcess
 
 
 def _train_process_entry(cfg_yaml, output_dir, dataset_info, metric_queue, stop_event):
@@ -121,13 +121,8 @@ def _train_process_entry(cfg_yaml, output_dir, dataset_info, metric_queue, stop_
         metric_queue.put({"type": "status", "status": "error"})
 
 
-class TrainProcess:
+class TrainProcess(SpawnProcess):
     """Manages a child process that runs Detectron2 training."""
-
-    def __init__(self):
-        self._process = None
-        self._metric_queue = None
-        self._stop_event = None
 
     def start(self, cfg, dataset_info):
         """Start training in a child process.
@@ -136,68 +131,4 @@ class TrainProcess:
             cfg: A Detectron2 CfgNode (will be serialized to YAML).
             dataset_info: List of dicts with keys 'name', 'json_path', 'image_root'.
         """
-        if self.is_alive():
-            raise RuntimeError("Training is already running")
-
-        ctx = mp.get_context("spawn")
-        self._metric_queue = ctx.Queue()
-        self._stop_event = ctx.Event()
-
-        cfg_yaml = cfg.dump()
-        output_dir = cfg.OUTPUT_DIR
-
-        self._process = ctx.Process(
-            target=_train_process_entry,
-            args=(cfg_yaml, output_dir, dataset_info, self._metric_queue, self._stop_event),
-            daemon=False,
-        )
-        self._process.start()
-
-    def request_stop(self):
-        """Signal the child process to stop gracefully."""
-        if self._stop_event is not None:
-            self._stop_event.set()
-
-    def is_alive(self):
-        """Check if the training process is still running."""
-        return self._process is not None and self._process.is_alive()
-
-    def poll_metrics(self):
-        """Drain all available messages from the metric queue.
-
-        Returns:
-            List of message dicts.
-        """
-        messages = []
-        if self._metric_queue is None:
-            return messages
-        while True:
-            try:
-                msg = self._metric_queue.get_nowait()
-                messages.append(msg)
-            except Empty:
-                break
-        return messages
-
-    def drain_remaining(self, timeout=2.0):
-        """Join the finished process and drain any messages still in flight.
-
-        A multiprocessing.Queue uses a background feeder thread, so terminal
-        messages (e.g. the final status) can still be in transit after the
-        process is no longer alive. Joining flushes the feeder, after which a
-        final drain returns whatever remains.
-
-        Returns:
-            List of remaining message dicts.
-        """
-        if self._process is not None:
-            self._process.join(timeout=timeout)
-        return self.poll_metrics()
-
-    def cleanup(self):
-        """Clean up resources after training is done."""
-        if self._process is not None and not self._process.is_alive():
-            self._process.join(timeout=5)
-            self._process = None
-        self._metric_queue = None
-        self._stop_event = None
+        self._spawn(_train_process_entry, (cfg.dump(), cfg.OUTPUT_DIR, dataset_info))

@@ -9,6 +9,7 @@ from PyQt6.QtWidgets import (
     QLabel,
     QLineEdit,
     QMessageBox,
+    QProgressBar,
     QPushButton,
     QSpinBox,
     QSplitter,
@@ -31,6 +32,7 @@ class TrainTab(QWidget):
         super().__init__(parent)
         self._train_process = TrainProcess()
         self._last_output_dir = ""
+        self._max_iter = 0
         self._setup_ui()
         self._setup_timer()
 
@@ -167,6 +169,12 @@ class TrainTab(QWidget):
 
         main_layout.addLayout(btn_row)
 
+        # --- Training progress bar ---
+        self._progress = QProgressBar()
+        self._progress.setFormat("%v / %m iters (%p%)")
+        self._progress.setVisible(False)
+        main_layout.addWidget(self._progress)
+
         # --- Log viewer + Loss plot (split view) ---
         splitter = QSplitter(Qt.Orientation.Horizontal)
         self._log_viewer = LogViewer()
@@ -282,6 +290,11 @@ class TrainTab(QWidget):
             QMessageBox.critical(self, "Training Error", str(e))
             return
 
+        self._max_iter = self._iter_spin.value()
+        self._progress.setRange(0, self._max_iter)
+        self._progress.setValue(0)
+        self._progress.setVisible(True)
+
         self._start_btn.setEnabled(False)
         self._start_btn.setText("Preparing...")
         self._stop_btn.setEnabled(True)
@@ -335,6 +348,8 @@ class TrainTab(QWidget):
             elif msg_type == "metrics":
                 total_loss = msg.get("total_loss")
                 iteration = msg.get("iter")
+                if iteration is not None:
+                    self._progress.setValue(iteration)
                 if total_loss is not None and iteration is not None:
                     self._loss_plot.add_point(iteration, total_loss)
                     self._log_viewer.append_log(f"[Iter {iteration}] total_loss={total_loss:.4f}")
@@ -342,8 +357,10 @@ class TrainTab(QWidget):
                 status = msg.get("status", "")
                 if status == "downloading":
                     self._start_btn.setText("Downloading weights...")
+                    self._progress.setRange(0, 0)  # indeterminate during download
                 elif status == "running":
                     self._start_btn.setText("Training...")
+                    self._progress.setRange(0, self._max_iter)  # back to determinate
                 elif status in ("completed", "stopped", "error"):
                     self._on_training_finished(status)
                     return True
@@ -356,6 +373,12 @@ class TrainTab(QWidget):
         self._start_btn.setEnabled(True)
         self._stop_btn.setEnabled(False)
         self._save_btn.setEnabled(status == "completed")
+        # Metrics arrive every N iters, so the last tick may stop short of max_iter;
+        # pin to 100% on success, then hide the bar.
+        if status == "completed":
+            self._progress.setRange(0, self._max_iter or 1)
+            self._progress.setValue(self._max_iter)
+        self._progress.setVisible(False)
         self._train_process.cleanup()
 
         if status == "completed":
@@ -364,3 +387,9 @@ class TrainTab(QWidget):
             self._log_viewer.append_log("--- Training stopped by user ---")
         else:
             self._log_viewer.append_log("--- Training ended with errors ---")
+
+    def shutdown(self):
+        """Stop training and reap the child process (called on app close)."""
+        self._poll_timer.stop()
+        self._train_process.request_stop()
+        self._train_process.terminate()

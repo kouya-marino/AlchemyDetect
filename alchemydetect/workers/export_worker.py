@@ -7,9 +7,9 @@ the GUI uses multiprocessing.Queue (logs / artifacts / status) and a
 multiprocessing.Event (stop request).
 """
 
-import multiprocessing as mp
 import traceback
-from queue import Empty
+
+from alchemydetect.workers.spawn_process import SpawnProcess
 
 
 def _export_process_entry(resolved, output_dir, fmt, options, message_queue, stop_event):
@@ -67,13 +67,12 @@ def _export_process_entry(resolved, output_dir, fmt, options, message_queue, sto
         message_queue.put({"type": "status", "status": "error"})
 
 
-class ExportProcess:
-    """Manages a child process that exports a model to a deployment format."""
+class ExportProcess(SpawnProcess):
+    """Manages a child process that exports a model to a deployment format.
 
-    def __init__(self):
-        self._process = None
-        self._message_queue = None
-        self._stop_event = None
+    Note: request_stop only takes effect at stage boundaries — the single
+    torch.onnx.export / TensorRT build call cannot be interrupted mid-flight.
+    """
 
     def start(self, resolved, output_dir, fmt, options):
         """Start an export in a child process.
@@ -84,64 +83,4 @@ class ExportProcess:
             fmt: Export format string.
             options: Dict of format-specific options.
         """
-        if self.is_alive():
-            raise RuntimeError("An export is already running")
-
-        ctx = mp.get_context("spawn")
-        self._message_queue = ctx.Queue()
-        self._stop_event = ctx.Event()
-
-        self._process = ctx.Process(
-            target=_export_process_entry,
-            args=(resolved, output_dir, fmt, options, self._message_queue, self._stop_event),
-            daemon=False,
-        )
-        self._process.start()
-
-    def request_stop(self):
-        """Signal the child process to stop. Export only checks this at stage
-        boundaries — the single torch.onnx.export call cannot be interrupted."""
-        if self._stop_event is not None:
-            self._stop_event.set()
-
-    def is_alive(self):
-        """Check if the export process is still running."""
-        return self._process is not None and self._process.is_alive()
-
-    def poll_metrics(self):
-        """Drain all available messages from the message queue.
-
-        Returns:
-            List of message dicts.
-        """
-        messages = []
-        if self._message_queue is None:
-            return messages
-        while True:
-            try:
-                messages.append(self._message_queue.get_nowait())
-            except Empty:
-                break
-        return messages
-
-    def drain_remaining(self, timeout=2.0):
-        """Join the finished process and drain any messages still in flight.
-
-        A multiprocessing.Queue uses a background feeder thread, so terminal
-        messages can still be in transit after the process is no longer alive.
-        Joining flushes the feeder, after which a final drain returns the rest.
-
-        Returns:
-            List of remaining message dicts.
-        """
-        if self._process is not None:
-            self._process.join(timeout=timeout)
-        return self.poll_metrics()
-
-    def cleanup(self):
-        """Clean up resources after export is done."""
-        if self._process is not None and not self._process.is_alive():
-            self._process.join(timeout=5)
-            self._process = None
-        self._message_queue = None
-        self._stop_event = None
+        self._spawn(_export_process_entry, (resolved, output_dir, fmt, options))
