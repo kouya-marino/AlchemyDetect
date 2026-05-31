@@ -1,5 +1,6 @@
 """Background thread for running Detectron2 inference."""
 
+import time
 from pathlib import Path
 
 from PyQt6.QtCore import QThread, pyqtSignal
@@ -8,8 +9,8 @@ from PyQt6.QtCore import QThread, pyqtSignal
 class InferenceWorker(QThread):
     """Runs inference on one or more images in a background thread."""
 
-    # Signals: (image_path, instances, annotated_image_rgb)
-    result_ready = pyqtSignal(str, object, object)
+    # Signals: (image_path, instances, annotated_image_rgb, detection_ms)
+    result_ready = pyqtSignal(str, object, object, float)
     progress = pyqtSignal(int, int)  # (current, total)
     error = pyqtSignal(str)
     finished_all = pyqtSignal()
@@ -63,9 +64,11 @@ class InferenceWorker(QThread):
                     break
 
                 try:
+                    start = time.perf_counter()
                     img_bgr, instances = run_inference_single(predictor, img_path)
+                    detection_ms = (time.perf_counter() - start) * 1000.0
                     annotated = visualize_predictions(img_bgr, instances, metadata)
-                    self.result_ready.emit(str(img_path), instances, annotated)
+                    self.result_ready.emit(str(img_path), instances, annotated, detection_ms)
                 except Exception as e:
                     self.error.emit(f"Error on {img_path}: {e}")
 

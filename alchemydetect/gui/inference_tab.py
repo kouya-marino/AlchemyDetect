@@ -33,7 +33,7 @@ class InferenceTab(QWidget):
         self._weights_path = None
         self._class_names = []
         self._worker = None
-        self._results = []  # List of (path, instances, annotated_rgb)
+        self._results = []  # List of (path, instances, annotated_rgb, detection_ms)
         self._current_idx = 0
         self._setup_ui()
 
@@ -98,6 +98,10 @@ class InferenceTab(QWidget):
 
         self._info_label = QLabel("")
         right_layout.addWidget(self._info_label)
+
+        self._timing_label = QLabel("")
+        self._timing_label.setStyleSheet("color: #1565c0; font-weight: bold;")
+        right_layout.addWidget(self._timing_label)
 
         self._table = QTableWidget(0, 3)
         self._table.setHorizontalHeaderLabels(["Class", "Score", "BBox"])
@@ -169,6 +173,7 @@ class InferenceTab(QWidget):
         self._current_idx = 0
         self._image_viewer.clear_image()
         self._table.setRowCount(0)
+        self._timing_label.setText("")
 
         self._progress.setVisible(True)
         self._progress.setMaximum(len(image_paths))
@@ -195,8 +200,8 @@ class InferenceTab(QWidget):
         if self._worker:
             self._worker.stop()
 
-    def _on_result(self, image_path, instances, annotated_rgb):
-        self._results.append((image_path, instances, annotated_rgb))
+    def _on_result(self, image_path, instances, annotated_rgb, detection_ms):
+        self._results.append((image_path, instances, annotated_rgb, detection_ms))
         # Show the first result immediately, then update nav
         if len(self._results) == 1:
             self._show_result(0)
@@ -222,10 +227,14 @@ class InferenceTab(QWidget):
         if idx < 0 or idx >= len(self._results):
             return
         self._current_idx = idx
-        path, instances, annotated_rgb = self._results[idx]
+        path, instances, annotated_rgb, detection_ms = self._results[idx]
 
         self._image_viewer.set_image_rgb(annotated_rgb)
         self._info_label.setText(f"{Path(path).name} — {len(instances)} detections")
+        timing = f"Detection time: {detection_ms:.1f} ms"
+        if detection_ms > 0:
+            timing += f" ({1000.0 / detection_ms:.1f} FPS)"
+        self._timing_label.setText(timing)
 
         # Populate detections table
         self._table.setRowCount(len(instances))
