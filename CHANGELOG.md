@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+- ONNX export mislabeled the traced `image_size` output (shape `(2,)`) as
+  "classes" and gave it a duplicate name, so the Deploy tab crashed with
+  "boolean index did not match indexed array" (the image-size tensor overwrote
+  the real predicted classes). Output roles are now assigned by matching the
+  detection count, with unique names and the image-size tensor ignored. Models
+  exported before this fix should be re-exported; the Deploy runtime now
+  substitutes defaults and logs a warning instead of crashing on them.
+
 ## [0.4.0] - 2026-05-31
 
 ### Added

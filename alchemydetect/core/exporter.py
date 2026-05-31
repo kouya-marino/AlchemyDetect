@@ -200,40 +200,69 @@ def build_export_metadata(
 # --------------------------------------------------------------------------- #
 # Heavy export path (torch / detectron2 / onnx imported lazily inside)
 # --------------------------------------------------------------------------- #
-def _infer_output_roles(outputs):
-    """Heuristically map traced output tensors to semantic roles by shape/dtype.
+def _classify_outputs(specs):
+    """Assign roles/names to traced outputs from their (shape, is_floating) specs.
 
-    Detectron2 flattens an Instances object into a tuple of tensors whose order
-    depends on field insertion order, so we identify each tensor by its shape:
-    boxes (N, 4), classes (N,) integer, scores (N,) float, masks (N, ..., H, W).
+    Detectron2 flattens an Instances into per-detection tensors (boxes (N,4),
+    scores (N,), classes (N,), optional masks (N,...,H,W)) plus an auxiliary
+    image-size tensor of shape (2,). We key off the box count N to identify the
+    per-detection tensors, assign exactly one of each role, and treat everything
+    else (e.g. the image size) as 'ignore'. Names are made unique so duplicate
+    roles can never collide when looked up by name at runtime.
+
+    Args:
+        specs: list of (shape_tuple, is_floating_bool), one per output tensor.
 
     Returns:
         (names, roles) parallel lists.
     """
+    box_count = None
+    for shape, _ in specs:
+        if len(shape) == 2 and shape[-1] == 4:
+            box_count = shape[0]
+            break
+
+    used = set()
+
+    def unique(base):
+        name = base
+        i = 1
+        while name in used:
+            name = f"{base}_{i}"
+            i += 1
+        used.add(name)
+        return name
+
+    have = {"boxes": False, "scores": False, "classes": False, "masks": False}
+    names, roles = [], []
+    for i, (shape, is_floating) in enumerate(specs):
+        ndim = len(shape)
+        per_detection = box_count is not None and ndim >= 1 and shape[0] == box_count
+        role, base = "ignore", f"output_{i}"
+        if ndim == 2 and shape[-1] == 4 and not have["boxes"]:
+            role, base, have["boxes"] = "boxes", "pred_boxes", True
+        elif ndim == 1 and per_detection and is_floating and not have["scores"]:
+            role, base, have["scores"] = "scores", "scores", True
+        elif ndim == 1 and per_detection and not is_floating and not have["classes"]:
+            role, base, have["classes"] = "classes", "pred_classes", True
+        elif ndim >= 3 and per_detection and not have["masks"]:
+            role, base, have["masks"] = "masks", "pred_masks", True
+        names.append(unique(base))
+        roles.append(role)
+    return names, roles
+
+
+def _infer_output_roles(outputs):
+    """Map traced output tensors to semantic roles (see _classify_outputs)."""
     import torch
 
-    names, roles = [], []
-    for i, t in enumerate(outputs):
-        if not hasattr(t, "dim"):
-            names.append(f"output_{i}")
-            roles.append("unknown")
-            continue
-        if t.dim() == 2 and t.shape[-1] == 4:
-            names.append("pred_boxes")
-            roles.append("boxes")
-        elif t.dim() == 1 and not torch.is_floating_point(t):
-            names.append("pred_classes")
-            roles.append("classes")
-        elif t.dim() == 1:
-            names.append("scores")
-            roles.append("scores")
-        elif t.dim() >= 3:
-            names.append("pred_masks")
-            roles.append("masks")
+    specs = []
+    for t in outputs:
+        if hasattr(t, "dim"):
+            specs.append((tuple(int(s) for s in t.shape), bool(torch.is_floating_point(t))))
         else:
-            names.append(f"output_{i}")
-            roles.append("unknown")
-    return names, roles
+            specs.append(((), False))
+    return _classify_outputs(specs)
 
 
 def _build_preprocessing(cfg):
