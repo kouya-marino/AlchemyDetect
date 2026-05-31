@@ -10,6 +10,7 @@ A desktop GUI application for training and running inference with Detectron2 mod
 - **Live monitoring** — real-time loss plot and training logs
 - **Inference** on single images or entire folders with result visualization
 - **Model management** — save and load trained weights for later use
+- **Export** trained models to ONNX for faster deployment (TensorRT planned)
 
 ## Supported Models
 
@@ -52,6 +53,18 @@ AlchemyDetect uses **COCO JSON** format for training datasets. You need:
 3. Adjust the confidence threshold
 4. Click **Run on Image** or **Run on Folder**
 5. Browse results using the navigation buttons
+
+### Export (ONNX)
+1. Install the export extra: `pip install alchemydetect[export]`
+2. Open the **Export** tab
+3. Click **Load Model...** and select a trained `.pth` file (config.yaml is auto-detected)
+4. Choose **ONNX**, set the opset / input size / fp16 / dynamic-axes options
+5. Pick an output directory and click **Export**
+6. The output directory will contain `model.onnx`, the copied `config.yaml` /
+   `class_names.json`, and an `export_metadata.json` describing the model
+
+> Detection models (Faster R-CNN, RetinaNet) export reliably. Mask R-CNN
+> (instance segmentation) export is **experimental**. TensorRT export is planned.
 
 ## Tech Stack
 

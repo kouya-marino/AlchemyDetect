@@ -2,6 +2,7 @@
 
 from PyQt6.QtWidgets import QMainWindow, QTabWidget
 
+from .export_tab import ExportTab
 from .inference_tab import InferenceTab
 from .train_tab import TrainTab
 
@@ -18,8 +19,10 @@ class MainWindow(QMainWindow):
         tabs = QTabWidget()
         self._train_tab = TrainTab()
         self._inference_tab = InferenceTab()
+        self._export_tab = ExportTab()
 
         tabs.addTab(self._train_tab, "Train")
         tabs.addTab(self._inference_tab, "Inference")
+        tabs.addTab(self._export_tab, "Export")
 
         self.setCentralWidget(tabs)

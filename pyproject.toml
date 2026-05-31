@@ -38,6 +38,14 @@ dev = [
     "pytest-cov>=4.0",
     "ruff>=0.4.0",
 ]
+# ONNX export support. Install with: pip install alchemydetect[export]
+# TensorRT is intentionally not listed — it is not reliably pip-installable and
+# must be installed manually to match your CUDA/cuDNN versions (see INSTALL.md).
+export = [
+    "onnx>=1.15",
+    "onnxruntime>=1.17",
+    "onnxconverter-common>=1.14",
+]
 
 [project.urls]
 Homepage = "https://github.com/kouya-marino/AlchemyDetect"

@@ -53,3 +53,21 @@ def test_image_viewer_none_image():
     viewer = ImageViewer()
     viewer.set_image_rgb(None)
     assert viewer._current_pixmap is None
+
+
+def test_export_tab():
+    from alchemydetect.core.exporter import is_onnxruntime_available
+    from alchemydetect.gui.export_tab import ExportTab
+
+    tab = ExportTab()
+    # Format combo populated with ONNX
+    assert tab._format_combo.count() >= 1
+    assert tab._format_combo.itemText(0) == "ONNX"
+    # Sensible option defaults
+    assert tab._opset_spin.value() == 17
+    assert tab._height_spin.value() == 800
+    assert tab._width_spin.value() == 800
+    # No model loaded initially; export guarded
+    assert tab._resolved is None
+    # Validate checkbox reflects onnxruntime availability
+    assert tab._validate_check.isEnabled() == is_onnxruntime_available()

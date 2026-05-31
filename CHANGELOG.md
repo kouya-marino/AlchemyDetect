@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+- Export tab to convert trained models to ONNX for faster deployment. Writes
+  `model.onnx` plus the copied `config.yaml` / `class_names.json` and an
+  `export_metadata.json` (records opset, input size, preprocessing params, and
+  output tensor roles). Detection models export reliably; Mask R-CNN export is
+  experimental. Install support with `pip install alchemydetect[export]`.
+- `device` override parameter on `load_predictor` so model loading outside the
+  GUI process (e.g. export) can target CPU/GPU based on local availability.
+
 ### Fixed
 - Class names now ordered by COCO category id to match Detectron2's contiguous
   class id mapping — previously predictions could be mislabeled when categories

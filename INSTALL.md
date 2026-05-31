@@ -127,7 +127,28 @@ Or install everything (except PyTorch and Detectron2) from requirements.txt:
 pip install -r requirements.txt
 ```
 
-### 7. Verify installation
+### 7. (Optional) Install model export support
+
+To export trained models to ONNX (and to run exported models), install the
+`export` extra:
+
+```bash
+pip install alchemydetect[export]
+# or, from a source checkout:
+pip install -e ".[export]"
+```
+
+This installs `onnx`, `onnxruntime`, and `onnxconverter-common`.
+
+**TensorRT** is intentionally not installed by the extra — it is not reliably
+pip-installable and must match your CUDA/cuDNN versions exactly. Install it
+manually following NVIDIA's documentation
+(https://docs.nvidia.com/deeplearning/tensorrt/install-guide/) if you need
+TensorRT engines. On Windows this requires a matching CUDA Toolkit + cuDNN and
+the TensorRT zip/installer for your CUDA version. Exported `.engine` files are
+**not portable** across different GPUs or TensorRT versions.
+
+### 8. Verify installation
 
 ```bash
 python -c "import torch; print('PyTorch:', torch.__version__, '| CUDA:', torch.cuda.is_available())"
@@ -135,7 +156,7 @@ python -c "import detectron2; print('Detectron2:', detectron2.__version__)"
 python -c "from PyQt6 import QtWidgets; print('PyQt6: OK')"
 ```
 
-### 8. Run the application
+### 9. Run the application
 
 ```bash
 python main.py
