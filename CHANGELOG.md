@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+- `docs/TensorRT.md` now includes steps for running the ONNX Deploy path on GPU
+  with `onnxruntime-gpu` (CUDA/cuDNN version matching, CUDA 11.8 vs 12.x).
+
 ## [0.4.2] - 2026-05-31
 
 ### Added

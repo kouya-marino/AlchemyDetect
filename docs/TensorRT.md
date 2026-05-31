@@ -225,7 +225,66 @@ All three should succeed and report consistent CUDA versions. In AlchemyDetect:
 
 ---
 
-## 8. Troubleshooting
+## 8. Running the ONNX path on GPU (onnxruntime-gpu)
+
+TensorRT gives the biggest speedup, but you can also accelerate the plain **ONNX**
+Deploy path on a GPU with `onnxruntime-gpu` — no TensorRT needed. The catch: the
+`onnxruntime-gpu` build must match your installed CUDA + cuDNN, or it logs
+`cublasLt64_*.dll is missing` and silently falls back to CPU (the Deploy side panel
+will then show `CPUExecutionProvider`, and inference is slow).
+
+### Version matching (the crucial part)
+
+| onnxruntime-gpu | CUDA | cuDNN |
+|-----------------|------|-------|
+| `1.17.x`        | 11.8 | 8.x   |
+| `1.18`–`1.20+`  | 12.x | 9.x   |
+
+Pick the build that matches the CUDA your PyTorch uses — check with:
+
+```bash
+python -c "import torch; print(torch.version.cuda)"
+```
+
+> Install only **one** of `onnxruntime` (CPU) or `onnxruntime-gpu` — having both in
+> the same environment causes import conflicts.
+
+### If your CUDA is 11.8 (e.g. PyTorch `cu118`)
+
+```bash
+pip uninstall -y onnxruntime onnxruntime-gpu
+pip install onnxruntime-gpu==1.17.1
+```
+
+Install **CUDA 11.8** + **cuDNN 8.x** and put their `bin` directories on `PATH`.
+PyTorch bundles its own CUDA libraries and does **not** expose them to onnxruntime,
+so onnxruntime needs a real CUDA/cuDNN install visible on `PATH`.
+
+### If your CUDA is 12.x
+
+```bash
+pip uninstall -y onnxruntime onnxruntime-gpu
+pip install onnxruntime-gpu        # recent builds target CUDA 12 + cuDNN 9
+```
+
+Install **CUDA 12.x** + **cuDNN 9.x** on `PATH`. (If you're on CUDA 11.8 PyTorch,
+switching to CUDA 12 means also reinstalling PyTorch as a `cu12x` build.)
+
+### Verify
+
+```bash
+python -c "import onnxruntime as ort; print(ort.get_available_providers())"
+```
+
+`CUDAExecutionProvider` should be listed. Then in the **Deploy** tab the side panel
+reads `Runtime: onnxruntime — CUDAExecutionProvider` instead of `CPUExecutionProvider`.
+
+> Even on GPU, onnxruntime is roughly on par with PyTorch-GPU for detection models;
+> for a genuine speedup over the `.pth`, use TensorRT (sections above).
+
+---
+
+## 9. Troubleshooting
 
 - **`Could not load ... cublasLt64_12.dll` / `cudnn... is missing`** — your CUDA/
   cuDNN runtime doesn't match the TensorRT (or onnxruntime-gpu) build. Align the
