@@ -140,6 +140,18 @@ pip install -e ".[export]"
 
 This installs `onnx`, `onnxruntime`, and `onnxconverter-common`.
 
+**Running exported models (Deploy tab) on GPU:** the `[export]` extra installs
+the **CPU** `onnxruntime`, which is the simplest and always works. If you instead
+install `onnxruntime-gpu`, it requires a matching **CUDA 12.x** runtime and
+**cuDNN 9.x** to be installed and on your PATH — otherwise you'll see a
+`cublasLt64_12.dll ... is missing` error and it will fall back to CPU. The Deploy
+tab handles this gracefully (it quietly uses CPU and logs the active provider to
+the session log), but to actually use the GPU you must install CUDA 12 + cuDNN 9
+per the onnxruntime requirements
+(https://onnxruntime.ai/docs/execution-providers/CUDA-ExecutionProvider.html#requirements).
+If you don't need GPU inference, prefer the CPU package:
+`pip uninstall onnxruntime-gpu && pip install onnxruntime`.
+
 **TensorRT** is intentionally not installed by the extra — it is not reliably
 pip-installable and must match your CUDA/cuDNN versions exactly. Install it
 manually following NVIDIA's documentation

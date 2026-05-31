@@ -39,10 +39,12 @@ class DeployInferenceWorker(QThread):
             import cv2
             from detectron2.data import MetadataCatalog
 
+            from alchemydetect.core.app_logging import get_logger
             from alchemydetect.core.inferencer import visualize_predictions
             from alchemydetect.core.runtime_inferencer import OnnxRuntimeInferencer
 
             inferencer = OnnxRuntimeInferencer(self._onnx_path, self._metadata)
+            get_logger().info("Deploy: onnxruntime provider = %s", inferencer.active_provider)
 
             metadata = None
             if self._class_names:

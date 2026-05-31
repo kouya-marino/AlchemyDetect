@@ -26,6 +26,9 @@ All notable changes to this project will be documented in this file.
 - ONNX export now fails fast with a clear "install alchemydetect[export]"
   message when the `onnx` package is missing, instead of a cryptic torch
   `OnnxExporterError` deep in the export call.
+- Deploy tab now falls back to CPU cleanly when the onnxruntime CUDA provider
+  can't load (e.g. `onnxruntime-gpu` installed without the CUDA 12 / cuDNN 9
+  runtime), silencing the noisy provider error and logging the active provider.
 - Class names now ordered by COCO category id to match Detectron2's contiguous
   class id mapping — previously predictions could be mislabeled when categories
   were not listed in ascending-id order

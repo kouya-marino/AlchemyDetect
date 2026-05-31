@@ -35,8 +35,6 @@ class OnnxRuntimeInferencer:
             metadata: Parsed export_metadata.json dict (preprocessing params,
                 output roles, task). Falls back to sane defaults if keys are absent.
         """
-        import onnxruntime as ort
-
         self._metadata = metadata or {}
         preprocessing = self._metadata.get("preprocessing", {})
         self._input_format = preprocessing.get("input_format", "BGR")
@@ -45,12 +43,34 @@ class OnnxRuntimeInferencer:
         self._output_roles = self._metadata.get("output_roles", [])
         self.task = self._metadata.get("task", "detection")
 
-        providers = ["CPUExecutionProvider"]
-        available = ort.get_available_providers()
-        if "CUDAExecutionProvider" in available:
-            providers = ["CUDAExecutionProvider", "CPUExecutionProvider"]
-        self._session = ort.InferenceSession(onnx_path, providers=providers)
+        self.active_provider = "CPUExecutionProvider"
+        self._session = self._create_session(onnx_path)
         self._input_name = self._session.get_inputs()[0].name
+
+    def _create_session(self, onnx_path):
+        """Create the onnxruntime session, preferring CUDA but falling back to CPU.
+
+        onnxruntime lists ``CUDAExecutionProvider`` whenever the onnxruntime-gpu
+        package is installed, even when the CUDA/cuDNN runtime DLLs are missing.
+        Requesting it then logs a noisy error before silently falling back. We
+        attempt CUDA with the logger quieted, then read back the provider that
+        actually activated so callers can report it honestly.
+        """
+        import onnxruntime as ort
+
+        if "CUDAExecutionProvider" in ort.get_available_providers():
+            ort.set_default_logger_severity(4)  # silence the expected CUDA-load failure
+            try:
+                session = ort.InferenceSession(onnx_path, providers=["CUDAExecutionProvider", "CPUExecutionProvider"])
+            finally:
+                ort.set_default_logger_severity(2)  # restore default (WARNING)
+            active = session.get_providers()
+            self.active_provider = active[0] if active else "CPUExecutionProvider"
+            return session
+
+        session = ort.InferenceSession(onnx_path, providers=["CPUExecutionProvider"])
+        self.active_provider = "CPUExecutionProvider"
+        return session
 
     def _preprocess(self, image_bgr):
         """Resize (shortest-edge) and format an image into a CHW float32 array."""
