@@ -165,6 +165,9 @@ When `tensorrt` is importable, the Export tab shows a **TensorRT** format option
 Deploy tab you additionally need **`pycuda`** (`pip install pycuda`) for GPU
 buffer management. Both the TensorRT export and runtime are experimental.
 
+See **[docs/TensorRT.md](docs/TensorRT.md)** for how the TensorRT path works and
+exact, platform-by-platform install steps (pip wheels, manual tar/zip, Docker).
+
 ### 8. Verify installation
 
 ```bash
