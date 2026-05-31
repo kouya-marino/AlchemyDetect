@@ -10,6 +10,8 @@ A desktop GUI application for training and running inference with Detectron2 mod
 - **Live monitoring** — real-time loss plot and training logs
 - **Inference** on single images or entire folders with result visualization
 - **Model management** — save and load trained weights for later use
+- **Export** trained models to ONNX or TensorRT for faster deployment
+- **Deploy** — run exported ONNX/TensorRT models in-app, independent of Detectron2
 
 ## Supported Models
 
@@ -52,6 +54,41 @@ AlchemyDetect uses **COCO JSON** format for training datasets. You need:
 3. Adjust the confidence threshold
 4. Click **Run on Image** or **Run on Folder**
 5. Browse results using the navigation buttons
+
+### Export (ONNX)
+1. Install the export extra: `pip install alchemydetect[export]`
+2. Open the **Export** tab
+3. Click **Load Model...** and select a trained `.pth` file (config.yaml is auto-detected)
+4. Choose **ONNX**, set the opset / input size / fp16 / dynamic-axes options
+5. Pick an output directory and click **Export**
+6. The output directory will contain `model.onnx`, the copied `config.yaml` /
+   `class_names.json`, and an `export_metadata.json` describing the model
+
+> Detection models (Faster R-CNN, RetinaNet) export reliably. Mask R-CNN
+> (instance segmentation) export is **experimental**.
+>
+> ONNX export requires the `onnx` package — if you skip the `[export]` extra the
+> Export tab will tell you to install it. **TensorRT** export appears as a format
+> option only when the `tensorrt` package is installed (build the ONNX first,
+> then a `model.engine`); install TensorRT manually to match your CUDA/cuDNN.
+
+### Deploy (run exported models)
+1. Open the **Deploy** tab
+2. Click **Load Model...** and select an exported `model.onnx` or `model.engine`
+   (its `export_metadata.json` must sit alongside it — produced by the Export tab)
+3. Adjust the confidence threshold
+4. Click **Run on Image** or **Run on Folder** and browse results
+
+ONNX runs via `onnxruntime` (GPU provider used automatically when available);
+`.engine` files run via a TensorRT runtime (requires `tensorrt` + `pycuda`).
+Both are independent of Detectron2's predictor.
+
+## Logs
+
+The app writes a timestamped session log to a `logs/` directory (set
+`ALCHEMYDETECT_LOG_DIR` to change the location). Training/export output and
+inference errors — including worker tracebacks — are mirrored there so you can
+analyze issues after the fact. The active log path is shown in the status bar.
 
 ## Tech Stack
 

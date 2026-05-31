@@ -27,14 +27,17 @@ AlchemyDetect/
 │   │   ├── config_builder.py        # Builds Detectron2 config from user params
 │   │   ├── dataset_utils.py         # COCO dataset registration & validation
 │   │   ├── trainer.py               # Custom trainer with metric hooks
-│   │   └── inferencer.py            # Inference wrapper
+│   │   ├── inferencer.py            # Inference wrapper
+│   │   └── exporter.py              # ONNX export (TensorRT planned)
 │   ├── workers/                     # Background threads/processes
 │   │   ├── train_worker.py          # Separate process for training
-│   │   └── inference_worker.py      # QThread for inference
+│   │   ├── inference_worker.py      # QThread for inference
+│   │   └── export_worker.py         # Separate process for export
 │   └── gui/                         # PyQt6 widgets
 │       ├── main_window.py           # Main window with tabs
 │       ├── train_tab.py             # Training UI
 │       ├── inference_tab.py         # Inference UI
+│       ├── export_tab.py            # Export UI (ONNX)
 │       ├── log_viewer.py            # Live log display
 │       ├── loss_plot.py             # Real-time loss chart
 │       ├── image_viewer.py          # Image display with overlays
@@ -82,6 +85,25 @@ AlchemyDetect/
 - [ ] Input validation edge cases
 - [ ] Error handling for training crashes
 - [ ] UI styling pass
+
+### Phase 7: Model Export — Done
+- [x] `exporter.py` — ONNX export via Detectron2 `TracingAdapter` + `torch.onnx.export`
+- [x] `export_worker.py` — multiprocessing export (spawn), mirrors train_worker IPC
+- [x] `export_tab.py` — Export UI (load model, ONNX/TensorRT options, progress + log)
+- [x] `export` optional-dependencies group (onnx, onnxruntime, onnxconverter-common)
+- [x] `runtime_inferencer.py` + `deploy_inference_worker.py` + `deploy_tab.py` —
+      Deploy tab runs exported ONNX models via onnxruntime (Phase 2)
+- [x] TensorRT export (ONNX → engine) + TensorRT runtime (`tensorrt` + `pycuda`),
+      gated behind a local TensorRT install (Phase 3)
+
+#### Export gotchas
+1. **Mask R-CNN ONNX** — TracingAdapter mask export is fragile; flagged experimental in the UI.
+2. **Output schema** — traced outputs are mapped to boxes/scores/classes/masks by shape heuristic and recorded in `export_metadata.json`.
+3. **Device in child** — export decides CUDA/CPU in the child process (via `load_predictor(device=...)`), never the GUI.
+4. **Cancel** — the single `torch.onnx.export` call can't be interrupted; stop only takes effect at stage boundaries.
+5. **TensorRT** — not pip-installable; `.engine` files are not portable across GPU/TRT versions.
+6. **Baked score threshold** — export bakes a low score threshold (`EXPORT_SCORE_THRESH = 0.05`) so the Deploy tab's threshold slider can filter freely; a high baked value would otherwise be an unremovable floor.
+7. **Deploy postprocess** — exported models trace with `do_postprocess=False`, so the Deploy runtime reproduces ResizeShortestEdge and scales boxes back to original image coordinates; mask paste is best-effort/experimental.
 
 ## Supported Models
 

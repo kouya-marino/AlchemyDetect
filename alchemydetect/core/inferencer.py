@@ -7,13 +7,17 @@ from detectron2.engine import DefaultPredictor
 from detectron2.utils.visualizer import ColorMode, Visualizer
 
 
-def load_predictor(config_yaml_path, weights_path, threshold=0.5):
+def load_predictor(config_yaml_path, weights_path, threshold=0.5, device=None):
     """Load a Detectron2 predictor from a saved config + weights pair.
 
     Args:
         config_yaml_path: Path to the saved config.yaml file.
         weights_path: Path to the .pth weights file.
         threshold: Confidence threshold for predictions.
+        device: Optional device override ("cuda"/"cpu"). If None, the device
+            baked into the saved config is used. Callers running outside the GUI
+            process (e.g. export) pass this to avoid a GPU-trained config trying
+            to use CUDA on a CPU-only machine.
 
     Returns:
         (DefaultPredictor, CfgNode)
@@ -24,6 +28,8 @@ def load_predictor(config_yaml_path, weights_path, threshold=0.5):
     cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = threshold
     if hasattr(cfg.MODEL, "RETINANET"):
         cfg.MODEL.RETINANET.SCORE_THRESH_TEST = threshold
+    if device is not None:
+        cfg.MODEL.DEVICE = device
     cfg.freeze()
 
     predictor = DefaultPredictor(cfg)

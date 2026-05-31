@@ -127,7 +127,45 @@ Or install everything (except PyTorch and Detectron2) from requirements.txt:
 pip install -r requirements.txt
 ```
 
-### 7. Verify installation
+### 7. (Optional) Install model export support
+
+To export trained models to ONNX (and to run exported models), install the
+`export` extra:
+
+```bash
+pip install alchemydetect[export]
+# or, from a source checkout:
+pip install -e ".[export]"
+```
+
+This installs `onnx`, `onnxruntime`, and `onnxconverter-common`.
+
+**Running exported models (Deploy tab) on GPU:** the `[export]` extra installs
+the **CPU** `onnxruntime`, which is the simplest and always works. If you instead
+install `onnxruntime-gpu`, it requires a matching **CUDA 12.x** runtime and
+**cuDNN 9.x** to be installed and on your PATH — otherwise you'll see a
+`cublasLt64_12.dll ... is missing` error and it will fall back to CPU. The Deploy
+tab handles this gracefully (it quietly uses CPU and logs the active provider to
+the session log), but to actually use the GPU you must install CUDA 12 + cuDNN 9
+per the onnxruntime requirements
+(https://onnxruntime.ai/docs/execution-providers/CUDA-ExecutionProvider.html#requirements).
+If you don't need GPU inference, prefer the CPU package:
+`pip uninstall onnxruntime-gpu && pip install onnxruntime`.
+
+**TensorRT** is intentionally not installed by the extra — it is not reliably
+pip-installable and must match your CUDA/cuDNN versions exactly. Install it
+manually following NVIDIA's documentation
+(https://docs.nvidia.com/deeplearning/tensorrt/install-guide/) if you need
+TensorRT engines. On Windows this requires a matching CUDA Toolkit + cuDNN and
+the TensorRT zip/installer for your CUDA version. Exported `.engine` files are
+**not portable** across different GPUs or TensorRT versions.
+
+When `tensorrt` is importable, the Export tab shows a **TensorRT** format option
+(it builds the ONNX first, then a `model.engine`). To also *run* engines in the
+Deploy tab you additionally need **`pycuda`** (`pip install pycuda`) for GPU
+buffer management. Both the TensorRT export and runtime are experimental.
+
+### 8. Verify installation
 
 ```bash
 python -c "import torch; print('PyTorch:', torch.__version__, '| CUDA:', torch.cuda.is_available())"
@@ -135,7 +173,7 @@ python -c "import detectron2; print('Detectron2:', detectron2.__version__)"
 python -c "from PyQt6 import QtWidgets; print('PyQt6: OK')"
 ```
 
-### 8. Run the application
+### 9. Run the application
 
 ```bash
 python main.py
