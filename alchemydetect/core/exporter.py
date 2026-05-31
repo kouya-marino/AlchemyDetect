@@ -260,7 +260,17 @@ def export_onnx(config_path, weights_path, output_path, opset, input_size, fp16,
 
     Returns:
         Dict with output_path, output_names, output_roles, task, preprocessing.
+
+    Raises:
+        RuntimeError: If the `onnx` package is not installed (torch.onnx.export
+            requires it to serialize the graph).
     """
+    if not is_onnx_available():
+        raise RuntimeError(
+            "ONNX export requires the 'onnx' package, which is not installed.\n"
+            "Install the export extras with:  pip install alchemydetect[export]"
+        )
+
     import torch
     from detectron2.export import TracingAdapter
     from detectron2.modeling import GeneralizedRCNN

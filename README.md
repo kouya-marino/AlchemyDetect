@@ -65,6 +65,16 @@ AlchemyDetect uses **COCO JSON** format for training datasets. You need:
 
 > Detection models (Faster R-CNN, RetinaNet) export reliably. Mask R-CNN
 > (instance segmentation) export is **experimental**. TensorRT export is planned.
+>
+> ONNX export requires the `onnx` package — if you skip the `[export]` extra the
+> Export tab will tell you to install it.
+
+## Logs
+
+The app writes a timestamped session log to a `logs/` directory (set
+`ALCHEMYDETECT_LOG_DIR` to change the location). Training/export output and
+inference errors — including worker tracebacks — are mirrored there so you can
+analyze issues after the fact. The active log path is shown in the status bar.
 
 ## Tech Stack
 

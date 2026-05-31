@@ -206,6 +206,9 @@ class InferenceTab(QWidget):
 
     def _on_error(self, msg):
         self._info_label.setText(f"Error: {msg}")
+        from alchemydetect.core.app_logging import get_logger
+
+        get_logger().error("Inference: %s", msg)
 
     def _on_finished(self):
         self._progress.setVisible(False)

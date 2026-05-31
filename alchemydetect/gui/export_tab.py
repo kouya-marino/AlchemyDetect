@@ -20,6 +20,7 @@ from PyQt6.QtWidgets import (
 
 from alchemydetect.core.exporter import (
     detect_task_from_config,
+    is_onnx_available,
     is_onnxruntime_available,
     read_class_names,
     resolve_model_dir,
@@ -190,6 +191,15 @@ class ExportTab(QWidget):
         output_dir = self._output_dir_edit.text().strip()
         if not output_dir:
             QMessageBox.warning(self, "Missing Output", "Please choose an output directory.")
+            return
+
+        if not is_onnx_available():
+            QMessageBox.critical(
+                self,
+                "ONNX Not Installed",
+                "ONNX export requires the 'onnx' package, which is not installed.\n\n"
+                "Install the export extras with:\n    pip install alchemydetect[export]",
+            )
             return
 
         options = {

@@ -12,8 +12,15 @@ All notable changes to this project will be documented in this file.
   experimental. Install support with `pip install alchemydetect[export]`.
 - `device` override parameter on `load_predictor` so model loading outside the
   GUI process (e.g. export) can target CPU/GPU based on local availability.
+- Persistent session logging to a `logs/` directory (override with
+  `ALCHEMYDETECT_LOG_DIR`). Training/export output and inference errors —
+  including relayed worker tracebacks — are mirrored to a timestamped log file
+  for post-hoc analysis. The active log path is shown in the status bar.
 
 ### Fixed
+- ONNX export now fails fast with a clear "install alchemydetect[export]"
+  message when the `onnx` package is missing, instead of a cryptic torch
+  `OnnxExporterError` deep in the export call.
 - Class names now ordered by COCO category id to match Detectron2's contiguous
   class id mapping — previously predictions could be mislabeled when categories
   were not listed in ascending-id order
