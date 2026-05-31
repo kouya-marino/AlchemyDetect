@@ -1,7 +1,9 @@
 # Plan: Model Export (ONNX → TensorRT) + Deployment Inference Tab
 
-> **Status:** Phase 1 (ONNX export) and Phase 2 (Deploy tab) implemented on
-> `feature/onnx-export` (PR #3). Phase 3 (TensorRT) is pending.
+> **Status:** Phases 1 (ONNX export), 2 (Deploy tab) and 3 (TensorRT export +
+> runtime) implemented on `feature/onnx-export` (PR #3). The TensorRT paths are
+> gated behind a local `tensorrt`/`pycuda` install and are experimental /
+> unverified without GPU hardware.
 
 ## Context
 
@@ -131,7 +133,7 @@ Heavy imports (`torch`, `detectron2.export`, `onnx`) lazy, inside functions only
 
 ---
 
-## Phase 3 — TensorRT (export + runtime), gated/optional  ⏳ pending
+## Phase 3 — TensorRT (export + runtime), gated/optional  ✅ implemented (PR #3)
 
 - `exporter.export_tensorrt(onnx_path, engine_path, fp16, workspace_gb, log_fn)` — ensure ONNX
   exists (build via `export_onnx` if user picks TensorRT directly); `import tensorrt as trt`,

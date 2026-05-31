@@ -86,14 +86,15 @@ AlchemyDetect/
 - [ ] Error handling for training crashes
 - [ ] UI styling pass
 
-### Phase 7: Model Export — In Progress
+### Phase 7: Model Export — Done
 - [x] `exporter.py` — ONNX export via Detectron2 `TracingAdapter` + `torch.onnx.export`
 - [x] `export_worker.py` — multiprocessing export (spawn), mirrors train_worker IPC
-- [x] `export_tab.py` — Export UI (load model, ONNX options, progress + log)
+- [x] `export_tab.py` — Export UI (load model, ONNX/TensorRT options, progress + log)
 - [x] `export` optional-dependencies group (onnx, onnxruntime, onnxconverter-common)
 - [x] `runtime_inferencer.py` + `deploy_inference_worker.py` + `deploy_tab.py` —
       Deploy tab runs exported ONNX models via onnxruntime (Phase 2)
-- [ ] TensorRT export (ONNX → engine) + TensorRT runtime, gated behind a local TensorRT install (Phase 3)
+- [x] TensorRT export (ONNX → engine) + TensorRT runtime (`tensorrt` + `pycuda`),
+      gated behind a local TensorRT install (Phase 3)
 
 #### Export gotchas
 1. **Mask R-CNN ONNX** — TracingAdapter mask export is fragile; flagged experimental in the UI.

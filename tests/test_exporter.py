@@ -9,11 +9,13 @@ from alchemydetect.core.exporter import (
     build_export_metadata,
     copy_sidecar_files,
     detect_task_from_config,
+    export_tensorrt,
     is_onnx_available,
     is_onnxruntime_available,
     is_tensorrt_available,
     read_class_names,
     resolve_model_dir,
+    run_tensorrt_export,
 )
 
 
@@ -160,3 +162,23 @@ def test_detect_task_from_config(temp_dir):
     with open(det, "w") as f:
         f.write("MODEL:\n  MASK_ON: false\n")
     assert detect_task_from_config(det) == "detection"
+
+
+# --- TensorRT export gating ------------------------------------------------ #
+@pytest.mark.skipif(is_tensorrt_available(), reason="tensorrt is installed")
+def test_export_tensorrt_requires_tensorrt(temp_dir):
+    # Without the tensorrt package, export must fail fast with a clear message.
+    onnx_path = os.path.join(temp_dir, "model.onnx")
+    open(onnx_path, "wb").close()
+    engine_path = os.path.join(temp_dir, "model.engine")
+    with pytest.raises(RuntimeError, match="TensorRT"):
+        export_tensorrt(
+            onnx_path, engine_path, fp16=False, workspace_gb=4.0, input_size=(800, 800), log_fn=lambda m: None
+        )
+
+
+@pytest.mark.skipif(is_tensorrt_available(), reason="tensorrt is installed")
+def test_run_tensorrt_export_requires_tensorrt(temp_dir):
+    resolved = {"model_dir": temp_dir, "weights_path": "x", "config_path": "y", "class_names_path": None}
+    with pytest.raises(RuntimeError, match="TensorRT"):
+        run_tensorrt_export(resolved, temp_dir, {"input_size": (800, 800), "fp16": False}, lambda m: None)

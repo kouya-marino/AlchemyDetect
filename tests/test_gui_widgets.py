@@ -78,7 +78,7 @@ def test_deploy_tab():
 
     tab = DeployTab()
     # No model loaded initially; run buttons disabled
-    assert tab._onnx_path is None
+    assert tab._model_path is None
     assert not tab._single_btn.isEnabled()
     assert not tab._folder_btn.isEnabled()
     # Threshold default

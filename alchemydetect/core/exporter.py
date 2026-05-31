@@ -22,6 +22,7 @@ CONFIG_FILENAME = "config.yaml"
 CLASS_NAMES_FILENAME = "class_names.json"
 METADATA_FILENAME = "export_metadata.json"
 ONNX_FILENAME = "model.onnx"
+ENGINE_FILENAME = "model.engine"
 
 
 # --------------------------------------------------------------------------- #
@@ -447,4 +448,115 @@ def run_onnx_export(resolved, output_dir, options, log_fn):
     if options.get("validate"):
         validate_onnx(onnx_path, options["input_size"], log_fn)
 
+    return artifacts
+
+
+# --------------------------------------------------------------------------- #
+# TensorRT export (ONNX -> engine), gated behind a local TensorRT install
+# --------------------------------------------------------------------------- #
+def export_tensorrt(onnx_path, engine_path, fp16, workspace_gb, input_size, log_fn):
+    """Build a serialized TensorRT engine from an ONNX model.
+
+    Args:
+        onnx_path: Path to an existing model.onnx.
+        engine_path: Where to write the serialized engine.
+        fp16: Build with FP16 if the platform supports it.
+        workspace_gb: Builder workspace memory pool limit, in GB.
+        input_size: (height, width) used as the optimization profile's opt shape
+            when the ONNX input has dynamic spatial dimensions.
+        log_fn: Callable(str) for progress messages.
+
+    Raises:
+        RuntimeError: If TensorRT is unavailable, ONNX parsing fails, or the
+            engine build returns nothing.
+    """
+    if not is_tensorrt_available():
+        raise RuntimeError(
+            "TensorRT export requires the 'tensorrt' package, which is not installed.\n"
+            "TensorRT is not pip-installable from this project — install it manually to "
+            "match your CUDA/cuDNN versions (see INSTALL.md)."
+        )
+
+    import tensorrt as trt
+
+    trt_logger = trt.Logger(trt.Logger.WARNING)
+    builder = trt.Builder(trt_logger)
+    network = builder.create_network(1 << int(trt.NetworkDefinitionCreationFlag.EXPLICIT_BATCH))
+    parser = trt.OnnxParser(network, trt_logger)
+
+    log_fn("Parsing ONNX into a TensorRT network...")
+    with open(onnx_path, "rb") as f:
+        if not parser.parse(f.read()):
+            errors = "; ".join(str(parser.get_error(i)) for i in range(parser.num_errors))
+            raise RuntimeError(f"TensorRT failed to parse ONNX: {errors}")
+
+    config = builder.create_builder_config()
+    workspace_bytes = int(workspace_gb * (1 << 30))
+    try:
+        config.set_memory_pool_limit(trt.MemoryPoolType.WORKSPACE, workspace_bytes)
+    except AttributeError:  # older TensorRT
+        config.max_workspace_size = workspace_bytes
+
+    if fp16:
+        if builder.platform_has_fast_fp16:
+            config.set_flag(trt.BuilderFlag.FP16)
+            log_fn("FP16 enabled.")
+        else:
+            log_fn("Platform has no fast FP16 support; building in FP32.")
+
+    # Dynamic input dims need an optimization profile (min/opt/max shapes).
+    inp = network.get_input(0)
+    dims = list(inp.shape)
+    if any(d == -1 for d in dims):
+        channels = dims[0] if dims[0] != -1 else 3
+        height, width = input_size
+        profile = builder.create_optimization_profile()
+        profile.set_shape(
+            inp.name,
+            (channels, 256, 256),
+            (channels, height, width),
+            (channels, max(height, 1344), max(width, 1344)),
+        )
+        config.add_optimization_profile(profile)
+        log_fn(f"Added optimization profile for dynamic input '{inp.name}'.")
+
+    log_fn("Building TensorRT engine (this can take several minutes)...")
+    serialized = builder.build_serialized_network(network, config)
+    if serialized is None:
+        raise RuntimeError("TensorRT engine build failed (build_serialized_network returned None).")
+    with open(engine_path, "wb") as f:
+        f.write(serialized)
+    log_fn(f"Wrote {engine_path}")
+    return engine_path
+
+
+def run_tensorrt_export(resolved, output_dir, options, log_fn):
+    """Orchestrate a TensorRT export: build the ONNX first, then the engine.
+
+    The intermediate model.onnx and the shared export_metadata.json are kept so
+    the Deploy tab can run either artifact.
+
+    Returns:
+        List of artifact file paths written (onnx, sidecars, metadata, engine).
+    """
+    if not is_tensorrt_available():
+        raise RuntimeError(
+            "TensorRT export requires the 'tensorrt' package, which is not installed.\n"
+            "Install it manually to match your CUDA/cuDNN versions (see INSTALL.md)."
+        )
+
+    output_dir = Path(output_dir)
+    log_fn("Step 1/2 — exporting ONNX...")
+    artifacts = run_onnx_export(resolved, output_dir, options, log_fn)
+
+    log_fn("Step 2/2 — building TensorRT engine...")
+    engine_path = export_tensorrt(
+        onnx_path=str(output_dir / ONNX_FILENAME),
+        engine_path=str(output_dir / ENGINE_FILENAME),
+        fp16=options["fp16"],
+        workspace_gb=options.get("workspace_gb", 4.0),
+        input_size=options["input_size"],
+        log_fn=log_fn,
+    )
+    artifacts.append(engine_path)
     return artifacts

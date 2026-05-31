@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 
 ### Added
+- TensorRT export: when the `tensorrt` package is installed, the Export tab
+  offers a TensorRT format that builds the ONNX first, then a `model.engine`
+  (FP16 toggle + workspace-size option, dynamic-shape optimization profile).
+  The Deploy tab can load and run `.engine` files via a TensorRT runtime
+  (requires `tensorrt` + `pycuda`; experimental). TensorRT is gated behind a
+  local install and never imported unless present.
 - Deploy tab to run inference with exported ONNX models via `onnxruntime`
   (GPU provider used when available), independent of Detectron2's predictor.
   Loads `model.onnx` + its `export_metadata.json`, reproduces test-time resize,

@@ -27,7 +27,7 @@ def _export_process_entry(resolved, output_dir, fmt, options, message_queue, sto
         # Import heavy deps only in the child process.
         import torch
 
-        from alchemydetect.core.exporter import run_onnx_export
+        from alchemydetect.core.exporter import run_onnx_export, run_tensorrt_export
 
         def log(msg):
             message_queue.put({"type": "log", "msg": msg})
@@ -50,6 +50,8 @@ def _export_process_entry(resolved, output_dir, fmt, options, message_queue, sto
 
         if fmt == "onnx":
             artifacts = run_onnx_export(resolved, output_dir, options, log)
+        elif fmt == "tensorrt":
+            artifacts = run_tensorrt_export(resolved, output_dir, options, log)
         else:
             raise ValueError(f"Unsupported export format: {fmt}")
 

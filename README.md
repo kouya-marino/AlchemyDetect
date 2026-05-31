@@ -10,7 +10,8 @@ A desktop GUI application for training and running inference with Detectron2 mod
 - **Live monitoring** — real-time loss plot and training logs
 - **Inference** on single images or entire folders with result visualization
 - **Model management** — save and load trained weights for later use
-- **Export** trained models to ONNX for faster deployment (TensorRT planned)
+- **Export** trained models to ONNX or TensorRT for faster deployment
+- **Deploy** — run exported ONNX/TensorRT models in-app, independent of Detectron2
 
 ## Supported Models
 
@@ -64,20 +65,23 @@ AlchemyDetect uses **COCO JSON** format for training datasets. You need:
    `class_names.json`, and an `export_metadata.json` describing the model
 
 > Detection models (Faster R-CNN, RetinaNet) export reliably. Mask R-CNN
-> (instance segmentation) export is **experimental**. TensorRT export is planned.
+> (instance segmentation) export is **experimental**.
 >
 > ONNX export requires the `onnx` package — if you skip the `[export]` extra the
-> Export tab will tell you to install it.
+> Export tab will tell you to install it. **TensorRT** export appears as a format
+> option only when the `tensorrt` package is installed (build the ONNX first,
+> then a `model.engine`); install TensorRT manually to match your CUDA/cuDNN.
 
-### Deploy (run exported ONNX models)
+### Deploy (run exported models)
 1. Open the **Deploy** tab
-2. Click **Load ONNX...** and select an exported `model.onnx` (its
-   `export_metadata.json` must sit alongside it — produced by the Export tab)
+2. Click **Load Model...** and select an exported `model.onnx` or `model.engine`
+   (its `export_metadata.json` must sit alongside it — produced by the Export tab)
 3. Adjust the confidence threshold
 4. Click **Run on Image** or **Run on Folder** and browse results
 
-Inference runs via `onnxruntime` (GPU provider used automatically when
-available), independent of Detectron2's predictor.
+ONNX runs via `onnxruntime` (GPU provider used automatically when available);
+`.engine` files run via a TensorRT runtime (requires `tensorrt` + `pycuda`).
+Both are independent of Detectron2's predictor.
 
 ## Logs
 

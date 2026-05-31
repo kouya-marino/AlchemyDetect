@@ -160,6 +160,11 @@ TensorRT engines. On Windows this requires a matching CUDA Toolkit + cuDNN and
 the TensorRT zip/installer for your CUDA version. Exported `.engine` files are
 **not portable** across different GPUs or TensorRT versions.
 
+When `tensorrt` is importable, the Export tab shows a **TensorRT** format option
+(it builds the ONNX first, then a `model.engine`). To also *run* engines in the
+Deploy tab you additionally need **`pycuda`** (`pip install pycuda`) for GPU
+buffer management. Both the TensorRT export and runtime are experimental.
+
 ### 8. Verify installation
 
 ```bash

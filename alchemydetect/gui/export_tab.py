@@ -6,6 +6,7 @@ from PyQt6.QtCore import QTimer
 from PyQt6.QtWidgets import (
     QCheckBox,
     QComboBox,
+    QDoubleSpinBox,
     QGroupBox,
     QHBoxLayout,
     QLabel,
@@ -22,6 +23,7 @@ from alchemydetect.core.exporter import (
     detect_task_from_config,
     is_onnx_available,
     is_onnxruntime_available,
+    is_tensorrt_available,
     read_class_names,
     resolve_model_dir,
 )
@@ -66,8 +68,20 @@ class ExportTab(QWidget):
         format_group = QGroupBox("Format")
         fg_layout = QVBoxLayout(format_group)
         self._format_combo = QComboBox()
-        self._format_combo.addItems(["ONNX"])
+        formats = ["ONNX"]
+        if is_tensorrt_available():
+            formats.append("TensorRT")
+        self._format_combo.addItems(formats)
+        self._format_combo.currentTextChanged.connect(self._on_format_changed)
         fg_layout.addWidget(self._format_combo)
+        # TensorRT requires building an ONNX first, then the engine.
+        self._trt_workspace_spin = QDoubleSpinBox()
+        self._trt_workspace_spin.setRange(0.25, 64.0)
+        self._trt_workspace_spin.setSingleStep(0.5)
+        self._trt_workspace_spin.setValue(4.0)
+        self._trt_workspace_spin.setSuffix(" GB workspace")
+        self._trt_workspace_spin.setVisible(False)
+        fg_layout.addWidget(self._trt_workspace_spin)
         config_row.addWidget(format_group)
 
         opt_group = QGroupBox("ONNX Options")
@@ -154,6 +168,9 @@ class ExportTab(QWidget):
         self._poll_timer.setInterval(150)
         self._poll_timer.timeout.connect(self._poll_export)
 
+    def _on_format_changed(self, text):
+        self._trt_workspace_spin.setVisible(text == "TensorRT")
+
     def _browse_output(self):
         path = browse_directory(self, start_dir=self._output_dir_edit.text())
         if path:
@@ -193,12 +210,23 @@ class ExportTab(QWidget):
             QMessageBox.warning(self, "Missing Output", "Please choose an output directory.")
             return
 
+        fmt = "tensorrt" if self._format_combo.currentText() == "TensorRT" else "onnx"
+
         if not is_onnx_available():
             QMessageBox.critical(
                 self,
                 "ONNX Not Installed",
-                "ONNX export requires the 'onnx' package, which is not installed.\n\n"
+                "Export requires the 'onnx' package, which is not installed.\n\n"
                 "Install the export extras with:\n    pip install alchemydetect[export]",
+            )
+            return
+        if fmt == "tensorrt" and not is_tensorrt_available():
+            QMessageBox.critical(
+                self,
+                "TensorRT Not Installed",
+                "TensorRT export requires the 'tensorrt' package, which is not installed.\n\n"
+                "TensorRT is not pip-installable from this project — install it manually to "
+                "match your CUDA/cuDNN versions (see INSTALL.md).",
             )
             return
 
@@ -208,14 +236,15 @@ class ExportTab(QWidget):
             "fp16": self._fp16_check.isChecked(),
             "dynamic_axes": self._dynamic_check.isChecked(),
             "validate": self._validate_check.isChecked(),
+            "workspace_gb": self._trt_workspace_spin.value(),
         }
 
         self._artifacts = []
         self._log_viewer.clear_logs()
-        self._log_viewer.append_log("--- Starting ONNX export ---")
+        self._log_viewer.append_log(f"--- Starting {fmt.upper()} export ---")
 
         try:
-            self._export_process.start(self._resolved, output_dir, "onnx", options)
+            self._export_process.start(self._resolved, output_dir, fmt, options)
         except Exception as e:
             QMessageBox.critical(self, "Export Error", str(e))
             return

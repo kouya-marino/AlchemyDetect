@@ -19,7 +19,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from alchemydetect.core.exporter import is_onnxruntime_available
+from alchemydetect.core.exporter import is_onnxruntime_available, is_tensorrt_available
 from alchemydetect.workers.deploy_inference_worker import DeployInferenceWorker
 
 from .dialogs import browse_directory, browse_file
@@ -31,7 +31,7 @@ class DeployTab(QWidget):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self._onnx_path = None
+        self._model_path = None
         self._metadata = None
         self._class_names = []
         self._worker = None
@@ -49,7 +49,7 @@ class DeployTab(QWidget):
         self._model_label = QLabel("No model loaded")
         mg_layout.addWidget(self._model_label, stretch=1)
 
-        load_btn = QPushButton("Load ONNX...")
+        load_btn = QPushButton("Load Model...")
         load_btn.clicked.connect(self._on_load_model)
         mg_layout.addWidget(load_btn)
 
@@ -125,7 +125,8 @@ class DeployTab(QWidget):
         main_layout.addWidget(splitter, stretch=1)
 
     def _on_load_model(self):
-        path = browse_file(self, "Select ONNX Model", filter_str="ONNX Models (*.onnx);;All Files (*)")
+        model_filter = "Exported Models (*.onnx *.engine);;ONNX (*.onnx);;TensorRT (*.engine);;All Files (*)"
+        path = browse_file(self, "Select Exported Model", filter_str=model_filter)
         if not path:
             return
 
@@ -148,7 +149,7 @@ class DeployTab(QWidget):
             QMessageBox.critical(self, "Metadata Error", f"Could not read export_metadata.json:\n{e}")
             return
 
-        self._onnx_path = path
+        self._model_path = path
         self._class_names = self._metadata.get("class_names") or []
         if not self._class_names:
             cn_path = model_dir / "class_names.json"
@@ -180,10 +181,20 @@ class DeployTab(QWidget):
             self._start_inference([str(p) for p in paths])
 
     def _start_inference(self, image_paths):
-        if not self._onnx_path or not self._metadata:
-            QMessageBox.warning(self, "No Model", "Please load an ONNX model first.")
+        if not self._model_path or not self._metadata:
+            QMessageBox.warning(self, "No Model", "Please load an exported model first.")
             return
-        if not is_onnxruntime_available():
+        is_engine = str(self._model_path).lower().endswith(".engine")
+        if is_engine and not is_tensorrt_available():
+            QMessageBox.critical(
+                self,
+                "TensorRT Not Installed",
+                "Running a TensorRT engine requires the 'tensorrt' (and 'pycuda') packages.\n\n"
+                "TensorRT is not pip-installable from this project — install it manually to "
+                "match your CUDA/cuDNN versions (see INSTALL.md).",
+            )
+            return
+        if not is_engine and not is_onnxruntime_available():
             QMessageBox.critical(
                 self,
                 "onnxruntime Not Installed",
@@ -206,7 +217,7 @@ class DeployTab(QWidget):
         self._stop_btn.setEnabled(True)
 
         self._worker = DeployInferenceWorker(
-            self._onnx_path,
+            self._model_path,
             self._metadata,
             image_paths,
             threshold=self._threshold_spin.value(),
