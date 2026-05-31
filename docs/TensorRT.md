@@ -228,47 +228,61 @@ All three should succeed and report consistent CUDA versions. In AlchemyDetect:
 ## 8. Running the ONNX path on GPU (onnxruntime-gpu)
 
 TensorRT gives the biggest speedup, but you can also accelerate the plain **ONNX**
-Deploy path on a GPU with `onnxruntime-gpu` — no TensorRT needed. The catch: the
-`onnxruntime-gpu` build must match your installed CUDA + cuDNN, or it logs
-`cublasLt64_*.dll is missing` and silently falls back to CPU (the Deploy side panel
-will then show `CPUExecutionProvider`, and inference is slow).
+Deploy path on a GPU with `onnxruntime-gpu` — no TensorRT needed.
+
+> **Changing the pip version alone is *not* enough.** `onnxruntime-gpu` does **not**
+> bundle CUDA/cuDNN — it loads those DLLs from `PATH` at runtime. If a matching
+> CUDA/cuDNN runtime isn't on `PATH`, it logs `cublasLt64_*.dll is missing` and
+> silently falls back to CPU (the Deploy side panel then shows
+> `CPUExecutionProvider`, and inference is slow). A working setup is **the right
+> `onnxruntime-gpu` build *plus* its matching CUDA + cuDNN on `PATH`.**
+>
+> PyTorch does **not** help here: it bundles its own CUDA libraries inside
+> `torch/lib`, but they are not on `PATH` and don't fully match an onnxruntime build
+> (e.g. PyTorch `cu118` ships CUDA 11 libs **and cuDNN 9**, whereas a CUDA-11
+> onnxruntime build wants cuDNN **8**).
 
 ### Version matching (the crucial part)
 
-| onnxruntime-gpu | CUDA | cuDNN |
-|-----------------|------|-------|
-| `1.17.x`        | 11.8 | 8.x   |
-| `1.18`–`1.20+`  | 12.x | 9.x   |
+The cuDNN major pairs with the **onnxruntime-gpu build**, not with PyTorch:
 
-Pick the build that matches the CUDA your PyTorch uses — check with:
+| onnxruntime-gpu | needs CUDA | needs cuDNN |
+|-----------------|------------|-------------|
+| `1.17.x`        | 11.8       | 8.x         |
+| `1.18.x`        | 11.8       | 8.x         |
+| `1.19`–`1.23+`  | 12.x       | 9.x         |
+
+Check what's installed:
 
 ```bash
-python -c "import torch; print(torch.version.cuda)"
+python -c "import onnxruntime as ort; print(ort.__version__)"
+python -c "import torch; print(torch.version.cuda)"   # PyTorch's CUDA (independent)
 ```
 
 > Install only **one** of `onnxruntime` (CPU) or `onnxruntime-gpu` — having both in
 > the same environment causes import conflicts.
 
-### If your CUDA is 11.8 (e.g. PyTorch `cu118`)
+### Route A — match CUDA 12 (simplest if a recent onnxruntime is already installed)
+
+Recent `onnxruntime-gpu` (1.19+) targets CUDA 12 + cuDNN 9, so you only need to add
+that runtime; you don't touch onnxruntime or PyTorch (PyTorch keeps using its own
+bundled libs regardless of its `cu118`/`cu12x` build):
+
+```bash
+# onnxruntime-gpu already installed (e.g. 1.23.x) — just provide the runtime:
+# install CUDA 12.x + cuDNN 9.x and add their bin/ directories to PATH.
+```
+
+### Route B — match CUDA 11.8
+
+Pin a CUDA-11 onnxruntime build **and** install cuDNN 8 (CUDA 11.8 + cuDNN 8.x must
+both be on `PATH`):
 
 ```bash
 pip uninstall -y onnxruntime onnxruntime-gpu
-pip install onnxruntime-gpu==1.17.1
+pip install onnxruntime-gpu==1.18.1     # CUDA 11.8 + cuDNN 8.x build
+# then install CUDA 11.8 + cuDNN 8.x and add their bin/ directories to PATH.
 ```
-
-Install **CUDA 11.8** + **cuDNN 8.x** and put their `bin` directories on `PATH`.
-PyTorch bundles its own CUDA libraries and does **not** expose them to onnxruntime,
-so onnxruntime needs a real CUDA/cuDNN install visible on `PATH`.
-
-### If your CUDA is 12.x
-
-```bash
-pip uninstall -y onnxruntime onnxruntime-gpu
-pip install onnxruntime-gpu        # recent builds target CUDA 12 + cuDNN 9
-```
-
-Install **CUDA 12.x** + **cuDNN 9.x** on `PATH`. (If you're on CUDA 11.8 PyTorch,
-switching to CUDA 12 means also reinstalling PyTorch as a `cu12x` build.)
 
 ### Verify
 
