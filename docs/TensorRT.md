@@ -75,6 +75,27 @@ Triggered from the Deploy tab when you load a `.engine`:
   onnxruntime-GPU; this is what genuinely beats a PyTorch GPU `.pth` (often 2–5×).
 - **No Python per-op overhead** — one compiled artifact, not Python-dispatched ops.
 
+### ⚠️ Known limitation — two-stage detectors (R-CNN) don't convert out of the box
+
+Faster R-CNN and Mask R-CNN export to an ONNX graph that contains **`RoiAlign`**
+(and NMS) operators. TensorRT's ONNX parser maps these to **plugins that are not
+registered by default**, so the engine build fails at parse time, e.g.:
+
+```
+UNSUPPORTED_NODE: ROIAlign plugin was not found in the plugin registry!
+  (node /roi_heads/box_pooler/.../RoiAlign)
+```
+
+AlchemyDetect's exporter does not register or supply these plugins. Converting
+two-stage Detectron2 detectors to TensorRT is a known hard case that requires
+NVIDIA's dedicated tooling and/or custom plugins, and may still hit unsupported
+ops. **So TensorRT export currently only works for models whose ops TensorRT
+supports natively; Faster/Mask R-CNN is not supported out of the box.** RetinaNet
+(single-stage) has a better chance but is unverified.
+
+This is independent of the GPU/version issue below — even on a supported GPU with
+TensorRT 8.6, an R-CNN model still hits the RoiAlign plugin error.
+
 ---
 
 ## 2. Prerequisites (read first)
@@ -303,6 +324,10 @@ reads `Runtime: onnxruntime — CUDAExecutionProvider` instead of `CPUExecutionP
 - **`Could not load ... cublasLt64_12.dll` / `cudnn... is missing`** — your CUDA/
   cuDNN runtime doesn't match the TensorRT (or onnxruntime-gpu) build. Align the
   CUDA major version across CUDA Toolkit, cuDNN, TensorRT, and PyTorch.
+- **`ROIAlign plugin was not found in the plugin registry` (build fails parsing
+  ONNX)** — the model is a two-stage detector (Faster/Mask R-CNN) whose `RoiAlign`
+  op needs a TensorRT plugin that isn't registered. Not supported out of the box —
+  see "Known limitation" in §1.
 - **`Failed to deserialize the TensorRT engine`** — the engine was built on a
   different GPU or TensorRT version. Engines are not portable; **rebuild** on the
   target machine.

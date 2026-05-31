@@ -405,7 +405,9 @@ def _convert_fp16(onnx_path, log_fn):
 
         log_fn("Converting ONNX graph to fp16...")
         model = onnx.load(onnx_path)
-        model = float16.convert_float_to_fp16(model)
+        # keep_io_types=True leaves the input/output tensors as float32 so the
+        # deployment runtime's float32 preprocessing still feeds the model correctly.
+        model = float16.convert_float_to_float16(model, keep_io_types=True)
         onnx.save(model, onnx_path)
         log_fn("fp16 conversion complete.")
     except ImportError:

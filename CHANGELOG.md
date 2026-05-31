@@ -6,7 +6,15 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 - `docs/TensorRT.md` now includes steps for running the ONNX Deploy path on GPU
-  with `onnxruntime-gpu` (CUDA/cuDNN version matching, CUDA 11.8 vs 12.x).
+  with `onnxruntime-gpu` (CUDA/cuDNN version matching, CUDA 11.8 vs 12.x), and a
+  "Known limitation" note that two-stage detectors (Faster/Mask R-CNN) fail to
+  build a TensorRT engine because their `RoiAlign` op needs an unregistered plugin.
+
+### Fixed
+- fp16 ONNX export crashed with `module 'onnxconverter_common.float16' has no
+  attribute 'convert_float_to_fp16'`. Use the correct API
+  `convert_float_to_float16(..., keep_io_types=True)` (keeps float32 I/O so the
+  Deploy runtime's preprocessing still matches).
 
 ## [0.4.2] - 2026-05-31
 
