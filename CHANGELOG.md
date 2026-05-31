@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Changed
+- CI: disabled PyPI publish attestations (`attestations: false`) to avoid
+  intermittent sigstore/Rekor 502 failures that aborted releases before upload.
+
 ## [0.5.0] - 2026-05-31
 
 ### Added
