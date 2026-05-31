@@ -4,20 +4,45 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-05-31
+
 ### Added
-- `docs/TensorRT.md` now includes steps for running the ONNX Deploy path on GPU
-  with `onnxruntime-gpu` (CUDA/cuDNN version matching, CUDA 11.8 vs 12.x), and a
+- Training progress bar in the Train tab — fills from 0 to max iterations as
+  training advances (indeterminate while pretrained weights download), shown
+  alongside the live log and loss plot.
+- `docs/TensorRT.md`: steps for running the ONNX Deploy path on GPU with
+  `onnxruntime-gpu` (CUDA/cuDNN version matching, CUDA 11.8 vs 12.x), plus a
   "Known limitation" note that two-stage detectors (Faster/Mask R-CNN) fail to
   build a TensorRT engine because their `RoiAlign` op needs an unregistered plugin.
 
 ### Fixed
-- fp16 ONNX export crashed: first with `module 'onnxconverter_common.float16' has
-  no attribute 'convert_float_to_fp16'` (wrong API name), then — once corrected to
-  `convert_float_to_float16(..., keep_io_types=True)` — with an invalid fp16 graph
-  for Detectron2 models (type-mismatched Cast nodes that onnxruntime rejects). The
-  fp16 pass is now fail-safe: it converts to a temp file, verifies it loads, and
-  only then replaces the model — otherwise it keeps the valid fp32 model and logs a
-  warning. onnxruntime validation is also non-fatal so it can't fail a completed export.
+- App crash (`QThread: Destroyed while thread is still running`) after running an
+  image in the Deploy/Inference tabs — the worker thread was released from within
+  its own `finished_all` slot before fully terminating. Tabs now wait for the
+  thread to finish before dropping the reference, and workers always emit
+  `finished_all` (via `finally`) so the UI re-enables even on a model-load error.
+- Graceful shutdown: closing the app now stops the training/export child processes
+  and awaits inference workers, so no GPU process is orphaned and no running
+  QThread is destroyed at exit.
+- fp16 ONNX export crashed (wrong `onnxconverter_common` API, then an invalid fp16
+  graph for Detectron2 models). The fp16 pass is now fail-safe — it converts to a
+  temp file, verifies it loads, and keeps the valid fp32 model otherwise;
+  onnxruntime validation is non-fatal.
+- TensorRT export keeps the intermediate ONNX fp32 (FP16 is applied only at the
+  engine build, where it belongs).
+- Stronger COCO dataset validation: rejects annotations referencing unknown
+  categories or with malformed bboxes, and categories missing `id`/`name`.
+
+### Changed
+- Deduplicated the inference/deploy worker threads and the training/export
+  spawn-process managers into shared base classes, and the two results-viewer tabs
+  into a shared panel/navigation mixin.
+- The GUI process no longer registers datasets when building a training config (the
+  training child process does).
+- Export metadata records the baked score threshold and (for TensorRT) the engine
+  fp16/workspace; session logs are capped to the newest 20 files.
+- Documented that loading a `.pth` runs `torch.load` (pickle) — load only models
+  you trust.
 
 ## [0.4.2] - 2026-05-31
 
