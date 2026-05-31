@@ -1,6 +1,5 @@
 """Inference wrapper around Detectron2's DefaultPredictor."""
 
-import cv2
 from detectron2.config import get_cfg
 from detectron2.data import MetadataCatalog
 from detectron2.engine import DefaultPredictor
@@ -34,23 +33,6 @@ def load_predictor(config_yaml_path, weights_path, threshold=0.5, device=None):
 
     predictor = DefaultPredictor(cfg)
     return predictor, cfg
-
-
-def run_inference_single(predictor, image_path):
-    """Run inference on a single image.
-
-    Args:
-        predictor: A DefaultPredictor instance.
-        image_path: Path to the image file.
-
-    Returns:
-        (original_image_bgr, instances) where instances is the prediction output.
-    """
-    img = cv2.imread(str(image_path))
-    if img is None:
-        raise ValueError(f"Could not read image: {image_path}")
-    outputs = predictor(img)
-    return img, outputs["instances"].to("cpu")
 
 
 def visualize_predictions(image_bgr, instances, metadata=None):

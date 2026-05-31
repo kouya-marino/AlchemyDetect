@@ -13,7 +13,7 @@ def test_export_process_cleanup_when_not_running():
     ep = ExportProcess()
     ep.cleanup()
     assert ep._process is None
-    assert ep._message_queue is None
+    assert ep._queue is None
     assert ep._stop_event is None
 
 
