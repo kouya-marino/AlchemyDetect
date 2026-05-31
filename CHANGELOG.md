@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+- `docs/TensorRT.md` — how the TensorRT export/runtime works plus exact install
+  steps (pip wheels, manual tar/zip, Docker) for Linux and Windows.
+
 ## [0.4.1] - 2026-05-31
 
 ### Added

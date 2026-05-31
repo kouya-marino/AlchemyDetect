@@ -90,6 +90,9 @@ inference is on CPU or GPU.
 > runtime matching your `onnxruntime-gpu` build). The real speedups come from GPU
 > + TensorRT.
 
+For how the TensorRT path works and exact install steps (Linux/Windows/Docker),
+see [docs/TensorRT.md](docs/TensorRT.md).
+
 ## Logs
 
 The app writes a timestamped session log to a `logs/` directory (set
