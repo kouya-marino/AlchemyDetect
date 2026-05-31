@@ -108,6 +108,13 @@ analyze issues after the fact. The active log path is shown in the status bar.
 - **PyTorch** — Deep learning backend
 - **pyqtgraph** — Real-time loss plotting
 
+## Security
+
+Loading a model `.pth` ultimately calls `torch.load`, which unpickles the file and
+can execute arbitrary code. **Only load model weights you trained or otherwise
+trust** — treat `.pth` files like executables. Exported `.onnx`/`.engine` files and
+COCO/config files are loaded with safe parsers.
+
 ## License
 
 [MIT](LICENSE)

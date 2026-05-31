@@ -10,6 +10,9 @@ from alchemydetect.gui.main_window import MainWindow
 
 
 def main():
+    # Safe for the gui-script entry point too (which bypasses __main__); required
+    # for Windows multiprocessing/spawn in frozen builds.
+    multiprocessing.freeze_support()
     log_path = init_logging()
 
     app = QApplication(sys.argv)
