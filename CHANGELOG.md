@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-05-31
+
 ### Added
 - The Inference and Deploy tabs now show the per-image detection time (and FPS)
   in the results side panel.
