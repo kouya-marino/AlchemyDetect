@@ -100,11 +100,34 @@ def test_deploy_tab():
     # Provider label is Deploy-specific; shared panel still present
     assert tab._provider_label is not None
     assert tab._table.columnCount() == 3
-    # No model loaded initially; run buttons disabled
+    # No model loaded initially; run buttons disabled; defaults
     assert tab._model_path is None
     assert not tab._single_btn.isEnabled()
     assert not tab._folder_btn.isEnabled()
-    # Threshold default
     assert tab._threshold_spin.value() == 0.5
-    # Detection-time label exists and starts empty
     assert tab._timing_label.text() == ""
+
+
+def test_results_viewer_update_nav():
+    # Shared ResultsViewerMixin navigation logic (prev/next enabled + label).
+    from alchemydetect.gui.inference_tab import InferenceTab
+
+    tab = InferenceTab()
+    tab._results = [object(), object(), object()]  # _update_nav only uses the count
+
+    tab._current_idx = 1
+    tab._update_nav()
+    assert tab._prev_btn.isEnabled() and tab._next_btn.isEnabled()
+    assert tab._nav_label.text() == "2 / 3"
+
+    tab._current_idx = 0
+    tab._update_nav()
+    assert not tab._prev_btn.isEnabled() and tab._next_btn.isEnabled()
+
+    tab._current_idx = 2
+    tab._update_nav()
+    assert tab._prev_btn.isEnabled() and not tab._next_btn.isEnabled()
+
+    tab._results = []
+    tab._update_nav()
+    assert tab._nav_label.text() == ""
