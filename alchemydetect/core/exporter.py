@@ -8,6 +8,7 @@ testable) on machines without torch or detectron2 installed.
 
 import importlib.util
 import json
+import os
 import shutil
 from datetime import datetime, timezone
 from pathlib import Path
@@ -395,21 +396,47 @@ def export_onnx(
 
 
 def _convert_fp16(onnx_path, log_fn):
-    """Convert an ONNX model to fp16 in place, if the tooling is available."""
+    """Convert an ONNX model to fp16, keeping the fp32 model if the result is invalid.
+
+    onnxconverter-common's float16 pass does not reliably handle complex graphs
+    (e.g. Detectron2 detectors): it can emit type-mismatched Cast nodes that fail
+    to load. To never ship a broken model, we convert to a temp file, verify it
+    actually loads, and only then replace the original — otherwise we keep fp32.
+    """
     if not is_onnx_available():
         log_fn("onnx package not installed; skipping fp16 conversion.")
         return
     try:
         import onnx
         from onnxconverter_common import float16
-
-        log_fn("Converting ONNX graph to fp16...")
-        model = onnx.load(onnx_path)
-        model = float16.convert_float_to_fp16(model)
-        onnx.save(model, onnx_path)
-        log_fn("fp16 conversion complete.")
     except ImportError:
         log_fn("onnxconverter-common not installed; skipping fp16 conversion.")
+        return
+
+    log_fn("Converting ONNX graph to fp16...")
+    tmp_path = onnx_path + ".fp16.tmp"
+    try:
+        model = onnx.load(onnx_path)
+        # keep_io_types=True leaves the input/output tensors as float32 so the
+        # deployment runtime's float32 preprocessing still feeds the model correctly.
+        fp16_model = float16.convert_float_to_float16(model, keep_io_types=True)
+        onnx.save(fp16_model, tmp_path)
+        # Verify the fp16 graph actually loads before replacing the fp32 model.
+        if is_onnxruntime_available():
+            import onnxruntime as ort
+
+            ort.InferenceSession(tmp_path, providers=["CPUExecutionProvider"])
+        else:
+            onnx.checker.check_model(tmp_path)
+        os.replace(tmp_path, onnx_path)
+        log_fn("fp16 conversion complete.")
+    except Exception as e:
+        if os.path.exists(tmp_path):
+            os.remove(tmp_path)
+        log_fn(
+            "fp16 conversion produced an invalid graph for this model; keeping fp32. "
+            f"({type(e).__name__}: {str(e)[:150]})"
+        )
 
 
 def validate_onnx(onnx_path, input_size, log_fn):
@@ -426,11 +453,17 @@ def validate_onnx(onnx_path, input_size, log_fn):
     import onnxruntime as ort
 
     log_fn("Validating with onnxruntime...")
-    session = ort.InferenceSession(onnx_path, providers=["CPUExecutionProvider"])
-    height, width = input_size
-    dummy = (np.random.rand(3, height, width) * 255.0).astype(np.float32)
-    input_name = session.get_inputs()[0].name
-    outputs = session.run(None, {input_name: dummy})
+    try:
+        session = ort.InferenceSession(onnx_path, providers=["CPUExecutionProvider"])
+        height, width = input_size
+        dummy = (np.random.rand(3, height, width) * 255.0).astype(np.float32)
+        input_name = session.get_inputs()[0].name
+        outputs = session.run(None, {input_name: dummy})
+    except Exception as e:
+        # Validation is a best-effort sanity check run after the artifacts are
+        # already written; never fail the whole export because of it.
+        log_fn(f"Validation could not run (model still written): {type(e).__name__}: {str(e)[:150]}")
+        return None
 
     shapes = {}
     for meta, arr in zip(session.get_outputs(), outputs):

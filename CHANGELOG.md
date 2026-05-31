@@ -6,7 +6,18 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 - `docs/TensorRT.md` now includes steps for running the ONNX Deploy path on GPU
-  with `onnxruntime-gpu` (CUDA/cuDNN version matching, CUDA 11.8 vs 12.x).
+  with `onnxruntime-gpu` (CUDA/cuDNN version matching, CUDA 11.8 vs 12.x), and a
+  "Known limitation" note that two-stage detectors (Faster/Mask R-CNN) fail to
+  build a TensorRT engine because their `RoiAlign` op needs an unregistered plugin.
+
+### Fixed
+- fp16 ONNX export crashed: first with `module 'onnxconverter_common.float16' has
+  no attribute 'convert_float_to_fp16'` (wrong API name), then — once corrected to
+  `convert_float_to_float16(..., keep_io_types=True)` — with an invalid fp16 graph
+  for Detectron2 models (type-mismatched Cast nodes that onnxruntime rejects). The
+  fp16 pass is now fail-safe: it converts to a temp file, verifies it loads, and
+  only then replaces the model — otherwise it keeps the valid fp32 model and logs a
+  warning. onnxruntime validation is also non-fatal so it can't fail a completed export.
 
 ## [0.4.2] - 2026-05-31
 
