@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-05-31
+
 ### Added
 - TensorRT export: when the `tensorrt` package is installed, the Export tab
   offers a TensorRT format that builds the ONNX first, then a `model.engine`
