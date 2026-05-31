@@ -69,6 +69,16 @@ AlchemyDetect uses **COCO JSON** format for training datasets. You need:
 > ONNX export requires the `onnx` package — if you skip the `[export]` extra the
 > Export tab will tell you to install it.
 
+### Deploy (run exported ONNX models)
+1. Open the **Deploy** tab
+2. Click **Load ONNX...** and select an exported `model.onnx` (its
+   `export_metadata.json` must sit alongside it — produced by the Export tab)
+3. Adjust the confidence threshold
+4. Click **Run on Image** or **Run on Folder** and browse results
+
+Inference runs via `onnxruntime` (GPU provider used automatically when
+available), independent of Detectron2's predictor.
+
 ## Logs
 
 The app writes a timestamped session log to a `logs/` directory (set

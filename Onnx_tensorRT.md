@@ -1,7 +1,7 @@
 # Plan: Model Export (ONNX → TensorRT) + Deployment Inference Tab
 
-> **Status:** Phase 1 (ONNX export) implemented in PR #3 (`feature/onnx-export`).
-> Phase 2 (Deploy tab) and Phase 3 (TensorRT) are pending.
+> **Status:** Phase 1 (ONNX export) and Phase 2 (Deploy tab) implemented on
+> `feature/onnx-export` (PR #3). Phase 3 (TensorRT) is pending.
 
 ## Context
 
@@ -103,7 +103,7 @@ Heavy imports (`torch`, `detectron2.export`, `onnx`) lazy, inside functions only
 
 ---
 
-## Phase 2 — Deployment Inference tab (run ONNX models)  ⏳ pending
+## Phase 2 — Deployment Inference tab (run ONNX models)  ✅ implemented (PR #3)
 
 ### New: `alchemydetect/core/runtime_inferencer.py`
 - `class OnnxRuntimeInferencer` — `__init__(onnx_path, metadata)` loads an

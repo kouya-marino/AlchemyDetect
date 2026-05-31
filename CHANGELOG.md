@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 
 ### Added
+- Deploy tab to run inference with exported ONNX models via `onnxruntime`
+  (GPU provider used when available), independent of Detectron2's predictor.
+  Loads `model.onnx` + its `export_metadata.json`, reproduces test-time resize,
+  scales boxes back to the original image, and reuses the existing visualizer /
+  detections table. Mask overlay is best-effort (experimental).
 - Export tab to convert trained models to ONNX for faster deployment. Writes
   `model.onnx` plus the copied `config.yaml` / `class_names.json` and an
   `export_metadata.json` (records opset, input size, preprocessing params, and

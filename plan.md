@@ -91,8 +91,9 @@ AlchemyDetect/
 - [x] `export_worker.py` — multiprocessing export (spawn), mirrors train_worker IPC
 - [x] `export_tab.py` — Export UI (load model, ONNX options, progress + log)
 - [x] `export` optional-dependencies group (onnx, onnxruntime, onnxconverter-common)
-- [ ] Deploy tab — run exported ONNX/TensorRT models in-app (Phase 2)
-- [ ] TensorRT export (ONNX → engine), gated behind a local TensorRT install (Phase 3)
+- [x] `runtime_inferencer.py` + `deploy_inference_worker.py` + `deploy_tab.py` —
+      Deploy tab runs exported ONNX models via onnxruntime (Phase 2)
+- [ ] TensorRT export (ONNX → engine) + TensorRT runtime, gated behind a local TensorRT install (Phase 3)
 
 #### Export gotchas
 1. **Mask R-CNN ONNX** — TracingAdapter mask export is fragile; flagged experimental in the UI.
@@ -100,6 +101,8 @@ AlchemyDetect/
 3. **Device in child** — export decides CUDA/CPU in the child process (via `load_predictor(device=...)`), never the GUI.
 4. **Cancel** — the single `torch.onnx.export` call can't be interrupted; stop only takes effect at stage boundaries.
 5. **TensorRT** — not pip-installable; `.engine` files are not portable across GPU/TRT versions.
+6. **Baked score threshold** — export bakes a low score threshold (`EXPORT_SCORE_THRESH = 0.05`) so the Deploy tab's threshold slider can filter freely; a high baked value would otherwise be an unremovable floor.
+7. **Deploy postprocess** — exported models trace with `do_postprocess=False`, so the Deploy runtime reproduces ResizeShortestEdge and scales boxes back to original image coordinates; mask paste is best-effort/experimental.
 
 ## Supported Models
 

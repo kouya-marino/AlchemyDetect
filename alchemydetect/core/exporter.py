@@ -12,6 +12,11 @@ import shutil
 from datetime import datetime, timezone
 from pathlib import Path
 
+# Bake a low score threshold into the exported model so the deployment runtime
+# can apply the user's threshold freely; a high baked threshold would otherwise
+# be a floor the runtime could never drop below.
+EXPORT_SCORE_THRESH = 0.05
+
 WEIGHTS_FILENAME = "model_final.pth"
 CONFIG_FILENAME = "config.yaml"
 CLASS_NAMES_FILENAME = "class_names.json"
@@ -280,7 +285,7 @@ def export_onnx(config_path, weights_path, output_path, opset, input_size, fp16,
     # Decide the device here, in the child process, never in the GUI process.
     device = "cuda" if torch.cuda.is_available() else "cpu"
     log_fn(f"Loading model and config (device: {device})...")
-    predictor, cfg = load_predictor(config_path, weights_path, device=device)
+    predictor, cfg = load_predictor(config_path, weights_path, threshold=EXPORT_SCORE_THRESH, device=device)
     model = predictor.model
     model.eval()
 

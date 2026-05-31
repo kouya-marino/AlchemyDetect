@@ -71,3 +71,15 @@ def test_export_tab():
     assert tab._resolved is None
     # Validate checkbox reflects onnxruntime availability
     assert tab._validate_check.isEnabled() == is_onnxruntime_available()
+
+
+def test_deploy_tab():
+    from alchemydetect.gui.deploy_tab import DeployTab
+
+    tab = DeployTab()
+    # No model loaded initially; run buttons disabled
+    assert tab._onnx_path is None
+    assert not tab._single_btn.isEnabled()
+    assert not tab._folder_btn.isEnabled()
+    # Threshold default
+    assert tab._threshold_spin.value() == 0.5
